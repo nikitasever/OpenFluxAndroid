@@ -23,120 +23,167 @@
             android:textSize="24sp"
             android:fontFamily="sans-serif-light" />
 
+        <!-- Language -->
+        <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_language" android:layout_marginTop="0dp" />
+
+        <LinearLayout style="@style/SettingsCard">
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_language_label" />
+                <Spinner
+                    android:id="@+id/languageSpinner"
+                    style="@style/SettingsCardSpinner"
+                    android:entries="@array/app_languages" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/settings_language_helper" />
+        </LinearLayout>
+
         <!-- Apps -->
         <TextView style="@style/SettingsSectionHeader" android:text="@string/split_tunnel_title" />
 
-        <LinearLayout
-            android:id="@+id/appRoutingRow"
-            style="@style/SettingsRow"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?android:attr/selectableItemBackground">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/split_tunnel_title" />
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_chevron_down"
-                android:rotation="-90"
-                app:tint="@color/text_secondary" />
+        <LinearLayout style="@style/SettingsCard">
+            <LinearLayout
+                android:id="@+id/appRoutingRow"
+                style="@style/SettingsCardRow.Clickable">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/split_tunnel_title" />
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_chevron_down"
+                    android:rotation="-90"
+                    app:tint="@color/text_secondary" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/split_tunnel_enable_helper" />
         </LinearLayout>
-        <TextView style="@style/SettingsHelper" android:text="@string/split_tunnel_enable_helper" />
 
         <!-- Network -->
         <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_network" />
 
-        <EditText
-            android:id="@+id/mtuInput"
-            style="@style/SettingsInput"
-            android:hint="@string/settings_mtu"
-            android:inputType="number"
-            android:maxLength="4" />
-        <TextView style="@style/SettingsHelper" android:text="@string/settings_mtu_helper" />
+        <LinearLayout style="@style/SettingsCard">
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_mtu" />
+                <EditText
+                    android:id="@+id/mtuInput"
+                    style="@style/SettingsCardValueInput"
+                    android:inputType="number"
+                    android:maxLength="4" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/settings_mtu_helper" />
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_bypass_lan" />
-            <Switch android:id="@+id/bypassLanSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <View style="@style/SettingsCardDivider" />
+
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_bypass_lan" />
+                <Switch android:id="@+id/bypassLanSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/settings_bypass_lan_helper" />
+
+            <View style="@style/SettingsCardDivider" />
+
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_kill_switch" />
+                <Switch android:id="@+id/killSwitchSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/settings_kill_switch_helper" />
+
+            <View style="@style/SettingsCardDivider" />
+
+            <LinearLayout style="@style/SettingsCardRow" android:layout_marginBottom="12dp">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_ip_stack" />
+                <Spinner
+                    android:id="@+id/ipStackSpinner"
+                    style="@style/SettingsCardSpinner"
+                    android:entries="@array/ip_stack_modes" />
+            </LinearLayout>
         </LinearLayout>
-        <TextView style="@style/SettingsHelper" android:text="@string/settings_bypass_lan_helper" />
-
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_kill_switch" />
-            <Switch android:id="@+id/killSwitchSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        </LinearLayout>
-        <TextView style="@style/SettingsHelper" android:text="@string/settings_kill_switch_helper" />
-
-        <TextView style="@style/SettingsRowLabel" android:layout_marginTop="12dp" android:text="@string/settings_ip_stack" />
-        <Spinner
-            android:id="@+id/ipStackSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:entries="@array/ip_stack_modes" />
 
         <!-- DNS -->
         <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_dns" />
 
-        <TextView style="@style/SettingsRowLabel" android:text="@string/settings_dns_mode" />
-        <Spinner
-            android:id="@+id/dnsModeSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:entries="@array/dns_modes" />
+        <LinearLayout style="@style/SettingsCard">
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_dns_mode" />
+                <Spinner
+                    android:id="@+id/dnsModeSpinner"
+                    style="@style/SettingsCardSpinner"
+                    android:entries="@array/dns_modes" />
+            </LinearLayout>
 
-        <EditText
-            android:id="@+id/dnsPrimaryInput"
-            style="@style/SettingsInput"
-            android:hint="@string/settings_dns_custom_primary"
-            android:inputType="textNoSuggestions" />
+            <EditText
+                android:id="@+id/dnsPrimaryInput"
+                style="@style/SettingsInput"
+                android:layout_marginTop="0dp"
+                android:layout_marginBottom="10dp"
+                android:hint="@string/settings_dns_custom_primary"
+                android:inputType="textNoSuggestions" />
 
-        <EditText
-            android:id="@+id/dnsSecondaryInput"
-            style="@style/SettingsInput"
-            android:hint="@string/settings_dns_custom_secondary"
-            android:inputType="textNoSuggestions" />
+            <EditText
+                android:id="@+id/dnsSecondaryInput"
+                style="@style/SettingsInput"
+                android:layout_marginTop="0dp"
+                android:layout_marginBottom="10dp"
+                android:hint="@string/settings_dns_custom_secondary"
+                android:inputType="textNoSuggestions" />
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_dot" />
-            <Switch android:id="@+id/dotSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <View style="@style/SettingsCardDivider" />
+
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_dot" />
+                <Switch android:id="@+id/dotSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/settings_dot_helper" />
         </LinearLayout>
-        <TextView style="@style/SettingsHelper" android:text="@string/settings_dot_helper" />
 
         <!-- Hotspot -->
         <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_hotspot" />
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_hotspot_enable" />
-            <Switch android:id="@+id/hotspotSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        </LinearLayout>
-        <TextView style="@style/SettingsHelper" android:text="@string/settings_hotspot_helper" />
+        <LinearLayout style="@style/SettingsCard">
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_hotspot_enable" />
+                <Switch android:id="@+id/hotspotSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <TextView style="@style/SettingsCardHelper" android:text="@string/settings_hotspot_helper" />
 
-        <EditText
-            android:id="@+id/hotspotPortInput"
-            style="@style/SettingsInput"
-            android:hint="@string/settings_hotspot_port"
-            android:inputType="number"
-            android:maxLength="5" />
+            <View style="@style/SettingsCardDivider" />
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_hotspot_auth" />
-            <Switch android:id="@+id/hotspotAuthSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_hotspot_port" />
+                <EditText
+                    android:id="@+id/hotspotPortInput"
+                    style="@style/SettingsCardValueInput"
+                    android:inputType="number"
+                    android:maxLength="5" />
+            </LinearLayout>
+
+            <View style="@style/SettingsCardDivider" />
+
+            <LinearLayout style="@style/SettingsCardRow" android:layout_marginBottom="4dp">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_hotspot_auth" />
+                <Switch android:id="@+id/hotspotAuthSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Misc -->
         <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_misc" />
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_show_speed" />
-            <Switch android:id="@+id/showSpeedSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        </LinearLayout>
+        <LinearLayout style="@style/SettingsCard">
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_show_speed" />
+                <Switch android:id="@+id/showSpeedSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_verbose_log" />
-            <Switch android:id="@+id/verboseLogSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        </LinearLayout>
+            <View style="@style/SettingsCardDivider" />
 
-        <LinearLayout style="@style/SettingsRow">
-            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_auto_boot" />
-            <Switch android:id="@+id/autoBootSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <LinearLayout style="@style/SettingsCardRow">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_verbose_log" />
+                <Switch android:id="@+id/verboseLogSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <View style="@style/SettingsCardDivider" />
+
+            <LinearLayout style="@style/SettingsCardRow" android:layout_marginBottom="4dp">
+                <TextView style="@style/SettingsCardLabel" android:text="@string/settings_auto_boot" />
+                <Switch android:id="@+id/autoBootSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>

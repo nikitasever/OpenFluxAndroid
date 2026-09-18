@@ -18,9 +18,9 @@ import io.github.p1neapplexpress.openflux.event.AppEvent
 import io.github.p1neapplexpress.openflux.event.EventBus
 import io.github.p1neapplexpress.openflux.ui.MainActivity
 import io.github.p1neapplexpress.openflux.util.AppSettings
+import io.github.p1neapplexpress.openflux.util.toSpeedString
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.util.Locale
 import java.util.concurrent.Executors
 
 class VpnNotificationManager(private val service: Service) {
@@ -64,7 +64,7 @@ class VpnNotificationManager(private val service: Service) {
             EventBus.dispatch(AppEvent.SpeedUpdate(rxPerSec, txPerSec))
             if (AppSettings(service).showNotificationSpeed) {
                 val ping = lastPingMs?.let { "  •  ${it}ms" } ?: ""
-                updateContent("↑ ${formatSpeed(txPerSec)}   ↓ ${formatSpeed(rxPerSec)}$ping")
+                updateContent("↑ ${txPerSec.toSpeedString()}   ↓ ${rxPerSec.toSpeedString()}$ping")
             }
             handler.postDelayed(this, UPDATE_INTERVAL_MS)
         }
@@ -139,12 +139,6 @@ class VpnNotificationManager(private val service: Service) {
             .setContentIntent(contentIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
-    }
-
-    private fun formatSpeed(bytesPerSecond: Long): String = when {
-        bytesPerSecond < 1024 -> "$bytesPerSecond B/s"
-        bytesPerSecond < 1024 * 1024 -> String.format(Locale.US, "%.0f KB/s", bytesPerSecond / 1024.0)
-        else -> String.format(Locale.US, "%.1f MB/s", bytesPerSecond / (1024.0 * 1024.0))
     }
 
     private fun createChannel() {

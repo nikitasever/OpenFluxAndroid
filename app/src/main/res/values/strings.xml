@@ -142,4 +142,17 @@
         <item>IPv4 only</item>
         <item>IPv6</item>
     </string-array>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_label">App language</string>
+    <string name="settings_language_helper">Restarts the interface in the chosen language</string>
+
+    <string-array name="app_languages">
+        <item>System default</item>
+        <item>Русский</item>
+        <item>English</item>
+    </string-array>
+
+    <string name="speed_down">Down</string>
+    <string name="speed_up">Up</string>
 </resources>

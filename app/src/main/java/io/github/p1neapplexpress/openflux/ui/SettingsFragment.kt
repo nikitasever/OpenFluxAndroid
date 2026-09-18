@@ -9,6 +9,8 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.activityViewModels
 import io.github.p1neapplexpress.openflux.R
 import io.github.p1neapplexpress.openflux.data.TunnelState
@@ -43,6 +45,7 @@ class SettingsFragment : BaseFragment() {
                 .commit()
         }
 
+        val languageSpinner = view.findViewById<Spinner>(R.id.languageSpinner)
         val mtuInput = view.findViewById<EditText>(R.id.mtuInput)
         val bypassLanSwitch = view.findViewById<Switch>(R.id.bypassLanSwitch)
         val killSwitchSwitch = view.findViewById<Switch>(R.id.killSwitchSwitch)
@@ -58,6 +61,7 @@ class SettingsFragment : BaseFragment() {
         val verboseLogSwitch = view.findViewById<Switch>(R.id.verboseLogSwitch)
         val autoBootSwitch = view.findViewById<Switch>(R.id.autoBootSwitch)
 
+        languageSpinner.setSelection(currentLanguageSelection())
         mtuInput.setText(settings.mtu.toString())
         bypassLanSwitch.isChecked = settings.bypassLan
         killSwitchSwitch.isChecked = settings.killSwitch
@@ -162,6 +166,27 @@ class SettingsFragment : BaseFragment() {
         autoBootSwitch.setOnCheckedChangeListener { _, checked ->
             if (skip()) return@setOnCheckedChangeListener
             settings.autoConnectOnBoot = checked
+        }
+
+        languageSpinner.onItemSelected { position ->
+            val locales = when (position) {
+                1 -> LocaleListCompat.forLanguageTags("ru")
+                2 -> LocaleListCompat.forLanguageTags("en")
+                else -> LocaleListCompat.getEmptyLocaleList()
+            }
+            // Recreates every activity in the task with the new locale applied;
+            // AppCompat persists the choice itself, no separate pref needed.
+            AppCompatDelegate.setApplicationLocales(locales)
+        }
+    }
+
+    /** 0 = system default, 1 = Russian, 2 = English - matches @array/app_languages order. */
+    private fun currentLanguageSelection(): Int {
+        val tag = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        return when {
+            tag.startsWith("ru") -> 1
+            tag.startsWith("en") -> 2
+            else -> 0
         }
     }
 
