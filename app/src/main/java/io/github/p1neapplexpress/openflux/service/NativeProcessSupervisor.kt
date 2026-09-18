@@ -165,16 +165,33 @@ class NativeProcessSupervisor(
     }
 
     /**
-     * android.jar's compile-time stub doesn't declare java.lang.Process.pid() (Java 9+),
-     * even though it's genuinely present at runtime on minSdk 26+ (Android's own
-     * java.lang.Process implementation). Reflection sidesteps that compile-time gap;
-     * returns null instead of throwing if it's ever unavailable for some reason - losing
-     * the [NativeProcessRegistry] exemption just means [StaleProcesses] treats this one
-     * process as any other, which is safe, just not ideal for parallel documents.
+     * android.jar's compile-time stub doesn't declare java.lang.Process.pid() (Java 9+), and
+     * on-device testing showed it's ALSO not callable via reflection on at least one real
+     * minSdk 26+ ROM (Samsung One UI / Android 16: NoSuchMethodException) - so unlike the
+     * comment this used to have, it isn't just a compile-time gap. Falls back to reading the
+     * "pid" field ART's own Process implementation has carried since Android's Harmony days,
+     * then to parsing it out of toString() as a last resort. Returns null (and logs once,
+     * loudly, since this used to fail silently) only if none of that works - losing the
+     * [NativeProcessRegistry] exemption then means [StaleProcesses] can kill this process as
+     * a sibling parallel document's leftover, which is exactly the bug this chain exists to
+     * avoid.
      */
-    private fun pidOf(process: Process): Long? = runCatching {
-        process.javaClass.getMethod("pid").invoke(process) as Long
-    }.getOrNull()
+    private fun pidOf(process: Process): Long? {
+        runCatching { return process.javaClass.getMethod("pid").invoke(process) as Long }
+        runCatching {
+            val field = generateSequence(process.javaClass) { it.superclass }
+                .firstNotNullOfOrNull { c -> c.declaredFields.find { it.name == "pid" } }
+                ?: return@runCatching
+            field.isAccessible = true
+            return (field.get(process) as? Number)?.toLong() ?: return@runCatching
+        }
+        runCatching {
+            val match = Regex("""pid=(\d+)""").find(process.toString())
+            if (match != null) return match.groupValues[1].toLong()
+        }
+        Logx.w(TAG, "could not determine pid of $process by any means; StaleProcesses may treat it as a leftover")
+        return null
+    }
 
     private fun writeKey(key: String): String {
         val file = keyFile
