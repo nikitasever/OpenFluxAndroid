@@ -62,6 +62,14 @@
     <string name="no_configs">No configurations</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
+    <string name="action_share_qr">Share QR</string>
+    <string name="qr_share_title">Tunnel QR code</string>
+    <string name="qr_share_helper">Scan this with another OpenFlux app, or share/copy the config</string>
+    <string name="qr_share_send">Share</string>
+    <string name="qr_share_copy">Copy config</string>
+    <string name="qr_share_copied">Config copied to clipboard</string>
+    <string name="qr_generate_failed">Could not generate QR code</string>
+    <string name="close">Close</string>
     <string name="delete_config_title">Delete configuration?</string>
     <string name="delete_config_msg">This will permanently remove the configuration.</string>
     <string name="cancel">Cancel</string>

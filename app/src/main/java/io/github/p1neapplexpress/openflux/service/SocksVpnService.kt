@@ -62,7 +62,7 @@ class SocksVpnService : android.net.VpnService() {
 
                 if (ok) {
                     vpn.isRunning.set(true)
-                    notifications.startSpeedUpdates()
+                    notifications.startSpeedUpdates(supervisor.socksPort)
                     val settings = AppSettings(this@SocksVpnService)
                     if (settings.shareLanProxy) {
                         hotspot.start(

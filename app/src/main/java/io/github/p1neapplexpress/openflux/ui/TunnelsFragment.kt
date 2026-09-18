@@ -275,6 +275,12 @@ class TunnelsFragment : BaseFragment() {
                 .commit()
         }
 
+        menuView.findViewById<View>(R.id.menu_share).setOnClickListener {
+            menu.dismiss()
+            popup?.dismiss()
+            QrShareDialog.show(requireContext(), tunnel)
+        }
+
         menuView.findViewById<View>(R.id.menu_delete).setOnClickListener {
             menu.dismiss()
             confirmDelete(tunnel)
