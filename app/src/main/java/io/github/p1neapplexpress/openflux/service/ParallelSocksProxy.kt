@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Loopback-only, same as [SplitDomainSocksProxy] - internal wiring, never LAN-facing.
  */
 class ParallelSocksProxy(
-    private val backends: List<NativeProcessSupervisor>,
+    @Volatile private var backends: List<NativeProcessSupervisor>,
     private val connectTimeoutMs: Int = 10_000,
 ) {
     companion object {
@@ -58,6 +58,11 @@ class ParallelSocksProxy(
         server = null
         pool?.shutdownNow()
         pool = null
+    }
+
+    /** Swaps the backend list live - existing in-flight connections are unaffected, only future dials use the new set. */
+    fun updateBackends(newBackends: List<NativeProcessSupervisor>) {
+        backends = newBackends
     }
 
     private fun acceptLoop(server: java.net.ServerSocket, pool: ExecutorService) {

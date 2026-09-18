@@ -46,6 +46,7 @@ class AddTunFragment : BaseFragment() {
     private lateinit var transportLabel: TextView
     private lateinit var urlContainer: TextInputLayout
     private lateinit var extraUrlsContainer: TextInputLayout
+    private lateinit var poolUrlContainer: TextInputLayout
     private lateinit var maxContainer: View
     private lateinit var cupsWarning: View
 
@@ -64,12 +65,14 @@ class AddTunFragment : BaseFragment() {
         transportLabel = view.findViewById(R.id.selectedTransport)
         urlContainer = view.findViewById(R.id.urlContainer)
         extraUrlsContainer = view.findViewById(R.id.extraUrlsContainer)
+        poolUrlContainer = view.findViewById(R.id.poolUrlContainer)
         maxContainer = view.findViewById(R.id.maxContainer)
         cupsWarning = view.findViewById(R.id.cupsEncryptionWarning)
 
         val name = view.findViewById<TextView>(R.id.name)
         val docUrl = view.findViewById<TextView>(R.id.documentUrl)
         val extraDocUrls = view.findViewById<TextView>(R.id.extraDocumentUrls)
+        val poolUrl = view.findViewById<TextView>(R.id.poolUrl)
         val maxToken = view.findViewById<TextView>(R.id.maxToken)
         val maxUid = view.findViewById<TextView>(R.id.maxUserId)
         val keyContainer = view.findViewById<TextInputLayout>(R.id.encryptionKeyContainer)
@@ -87,6 +90,7 @@ class AddTunFragment : BaseFragment() {
             name.text = initial.name
             docUrl.text = form.url
             extraDocUrls.text = initial.extraDocumentUrls.joinToString("\n")
+            poolUrl.text = initial.poolUrl.orEmpty()
             maxToken.text = form.maxToken
             maxUid.text = form.maxUid
             key.text = initial.encryptionKey.orEmpty()
@@ -112,6 +116,12 @@ class AddTunFragment : BaseFragment() {
         view.findViewById<View>(R.id.debugSelector).setOnClickListener { debugSwitch.toggle() }
 
         key.doAfterTextChanged { keyContainer.error = null }
+
+        // Pool mode replaces the manual list at runtime (see SocksVpnService), so make that
+        // explicit in the UI too rather than letting someone fill in both and wonder why the
+        // list is being ignored.
+        extraUrlsContainer.isEnabled = poolUrl.text.isNullOrBlank()
+        poolUrl.doAfterTextChanged { extraUrlsContainer.isEnabled = it.isNullOrBlank() }
 
         save.setOnClickListener {
             val tunnelName = name.text.trim().toString()
@@ -152,6 +162,7 @@ class AddTunFragment : BaseFragment() {
                 } else {
                     emptyList()
                 },
+                poolUrl = poolUrl.text.trim().toString().takeIf { transport.usesUrl && it.isNotEmpty() },
             )
 
             val old = editing
@@ -171,6 +182,7 @@ class AddTunFragment : BaseFragment() {
         transportLabel.setText(labelOf(selected))
         urlContainer.isVisible = selected.usesUrl
         extraUrlsContainer.isVisible = selected.usesUrl
+        poolUrlContainer.isVisible = selected.usesUrl
         maxContainer.isVisible = !selected.usesUrl
         urlContainer.hint = getString(
             when (selected) {

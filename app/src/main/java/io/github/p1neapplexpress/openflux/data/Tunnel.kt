@@ -16,4 +16,12 @@ data class Tunnel(
      * stored/shared tunnels decode unchanged.
      */
     val extraDocumentUrls: List<String> = emptyList(),
+    /**
+     * A pool.json URL (published on Yandex Disk by openflux-pool/pool_manager.py) that replaces
+     * [extraDocumentUrls] with a server-managed, auto-rotating document list: the app polls it
+     * periodically and swaps documents in/out via ParallelTransportGroup.reconcilePool as the
+     * VPS-side pool manager retires unhealthy ones and provisions replacements. Null/blank means
+     * this tunnel doesn't use pool mode.
+     */
+    val poolUrl: String? = null,
 )

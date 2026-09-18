@@ -28,6 +28,15 @@ class ParallelTransportGroup(
     private var proxy: ParallelSocksProxy? = null
     private val deadCount = AtomicInteger(0)
 
+    // Pool mode (server-managed document list, see DocumentPoolPoller) is mutually exclusive
+    // with the static extraDocumentUrls mode above and kept fully separate: it always runs
+    // behind a ParallelSocksProxy - even for a single document - so socksPort never has to
+    // change as documents get swapped in/out later by reconcilePool().
+    private val poolSupervisors = java.util.concurrent.ConcurrentHashMap<String, NativeProcessSupervisor>()
+    private var poolProxy: ParallelSocksProxy? = null
+    private var poolBasePayload: List<String>? = null
+    private var poolEncryptionKey: String? = null
+
     /** SOCKS5 port tun2socks should target - the sole backend's port, or the aggregator's. */
     @Volatile
     var socksPort: Int = 0
@@ -37,7 +46,7 @@ class ParallelTransportGroup(
     var error: String? = null
         private set
 
-    val isReady: Boolean get() = supervisors.any { it.isReady }
+    val isReady: Boolean get() = supervisors.any { it.isReady } || poolSupervisors.values.any { it.isReady }
 
     fun start(payload: List<String>, encryptionKey: String?, extraDocumentUrls: List<String>) {
         deadCount.set(0)
@@ -67,10 +76,60 @@ class ParallelTransportGroup(
         }
     }
 
+    /** Starts pool mode with an initial document set from [DocumentPoolPoller]. */
+    fun startPool(basePayload: List<String>, encryptionKey: String?, initialUrls: List<String>) {
+        error = null
+        poolBasePayload = basePayload
+        poolEncryptionKey = encryptionKey
+        initialUrls.forEach(::addPoolDocument)
+        socksPort = ParallelSocksProxy(poolSupervisors.values.toList()).start().also { poolProxy = it }.port
+        Logx.i(TAG, "pool mode: running ${poolSupervisors.size} document(s)")
+    }
+
+    /** Adds/removes documents to match [urls] exactly; documents that stay are left untouched. */
+    fun reconcilePool(urls: List<String>) {
+        val wanted = urls.toSet()
+        val added = wanted - poolSupervisors.keys
+        val removed = poolSupervisors.keys - wanted
+        if (added.isEmpty() && removed.isEmpty()) return
+
+        added.forEach(::addPoolDocument)
+        poolProxy?.updateBackends(poolSupervisors.values.toList())
+        removed.forEach(::removePoolDocument)
+        Logx.i(TAG, "pool reconciled: +${added.size} -${removed.size}, now ${poolSupervisors.size} document(s)")
+    }
+
+    private fun addPoolDocument(url: String) {
+        val basePayload = poolBasePayload ?: return
+        val supervisor = NativeProcessSupervisor(context, ::onPoolBackendExit)
+        poolSupervisors[url] = supervisor
+        supervisor.start(TunnelPayload.withUrl(basePayload, url), poolEncryptionKey)
+    }
+
+    private fun removePoolDocument(url: String) {
+        poolSupervisors.remove(url)?.stop()
+    }
+
+    private fun onPoolBackendExit(message: String) {
+        Logx.w(TAG, "pool backend exited: $message")
+        // Membership changes over time (documents get swapped by the pool poller), so - unlike
+        // the static path's deadCount - liveness is checked directly against who's left, rather
+        // than counted against a fixed original size.
+        if (poolSupervisors.values.none { it.isReady }) {
+            error = message
+            onUnexpectedExit(message)
+        }
+    }
+
     fun stop() {
         proxy?.stop()
         proxy = null
         supervisors.forEach { it.stop() }
         supervisors = emptyList()
+
+        poolProxy?.stop()
+        poolProxy = null
+        poolSupervisors.values.forEach { it.stop() }
+        poolSupervisors.clear()
     }
 }

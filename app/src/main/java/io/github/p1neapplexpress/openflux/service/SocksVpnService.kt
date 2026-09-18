@@ -23,6 +23,7 @@ class SocksVpnService : android.net.VpnService() {
     private lateinit var tun2socks: Tun2SocksLauncher
     private lateinit var notifications: VpnNotificationManager
     private val hotspot = HotspotProxyBridge()
+    private var poolPoller: DocumentPoolPoller? = null
 
     private var lastIntent: Intent? = null
 
@@ -31,16 +32,28 @@ class SocksVpnService : android.net.VpnService() {
         override fun stopVpn() = stopEverything()
         override fun isFServiceRunning(): Boolean = group.isReady
         override fun nativeError(): String? = group.error
-        override fun stopOpenFluxNative() = group.stop()
+        override fun stopOpenFluxNative() {
+            poolPoller?.stop()
+            poolPoller = null
+            group.stop()
+        }
 
         override fun startOpenFluxNative(
             transport: String?,
             args: Array<String>,
             encryptionKey: String?,
             extraDocumentUrls: Array<String>,
+            poolUrl: String?,
         ) {
             transport ?: return
-            group.start(args.toList(), encryptionKey, extraDocumentUrls.toList())
+            if (poolUrl.isNullOrBlank()) {
+                group.start(args.toList(), encryptionKey, extraDocumentUrls.toList())
+                return
+            }
+            val poller = DocumentPoolPoller(poolUrl) { docs -> group.reconcilePool(docs) }
+            poolPoller = poller
+            group.startPool(args.toList(), encryptionKey, emptyList())
+            poller.start()
         }
 
         override fun startTun2Socks() {
@@ -136,6 +149,8 @@ class SocksVpnService : android.net.VpnService() {
     private fun stopEverything() {
         Logx.i(TAG, "stopEverything")
         notifications.stopSpeedUpdates()
+        runCatching { poolPoller?.stop() }
+        poolPoller = null
         runCatching { hotspot.stop() }
         runCatching { tun2socks.stop() }
         runCatching { group.stop() }

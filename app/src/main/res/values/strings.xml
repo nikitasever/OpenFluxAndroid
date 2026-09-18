@@ -39,6 +39,8 @@
     <string name="tunnel_imported">Imported \"%1$s\"</string>
     <string name="extra_documents">Extra documents (optional)</string>
     <string name="extra_documents_helper">One URL per line. Each runs in parallel; new connections spread across whichever are up, so one document reconnecting doesn\'t stall the rest.</string>
+    <string name="pool_url">Pool URL (optional, replaces the list above)</string>
+    <string name="pool_url_helper">A pool.json link from a VPS-side pool manager. The app polls it and follows along as documents get swapped automatically.</string>
     <string name="name_required">Enter a tunnel name</string>
 
     <string name="add_tunnel">Add tunnel</string>
