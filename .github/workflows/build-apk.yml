@@ -22,6 +22,16 @@ jobs:
         run: |
           echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
 
+      # ubuntu-latest runners are ephemeral, so the default ~/.android/debug.keystore
+      # is regenerated (with a new random key) on every run. That breaks
+      # `adb install` over a previous debug build with INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+      # Cache it across runs so consecutive CI builds stay installable in place.
+      - name: Cache debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
