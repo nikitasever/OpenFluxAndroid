@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Mirrors TunnelsViewModel.startTunnel's bind -> startOpenFluxNative -> startTun2Socks
@@ -51,13 +52,13 @@ class BootReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
         val pending = goAsync()
 
-        @Volatile var service: IUnifiedService? = null
+        val service = AtomicReference<IUnifiedService?>(null)
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                service = IUnifiedService.Stub.asInterface(binder)
+                service.set(IUnifiedService.Stub.asInterface(binder))
             }
             override fun onServiceDisconnected(name: ComponentName?) {
-                service = null
+                service.set(null)
             }
         }
 
@@ -77,10 +78,10 @@ class BootReceiver : BroadcastReceiver() {
                 )
 
                 var waited = 0L
-                while (service == null && waited < BIND_TIMEOUT_MS) {
+                while (service.get() == null && waited < BIND_TIMEOUT_MS) {
                     delay(POLL_MS); waited += POLL_MS
                 }
-                val bound = service ?: run { Logx.e(TAG, "auto-connect: service did not bind"); return@launch }
+                val bound = service.get() ?: run { Logx.e(TAG, "auto-connect: service did not bind"); return@launch }
 
                 bound.startOpenFluxNative(
                     tunnel.transportType,

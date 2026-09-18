@@ -97,8 +97,8 @@ class DnsTcpRelay(
             try {
                 val plain = Socks5.connect(socksPort, target, connectTimeoutMs)
                 if (!useTls) return plain
-                return runCatching {
-                    SSLSocketFactory.getDefault().createSocket(
+                return runCatching<Socket> {
+                    (SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(
                         plain,
                         target.hostString,
                         target.port,
