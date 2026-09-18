@@ -3,12 +3,18 @@ package io.github.p1neapplexpress.openflux.service
 import android.content.Context
 import io.github.p1neapplexpress.openflux.NativeBridge
 import io.github.p1neapplexpress.openflux.util.AppSettings
+import io.github.p1neapplexpress.openflux.util.DomainRulesPreferences
 import io.github.p1neapplexpress.openflux.util.Logx
 import io.github.p1neapplexpress.openflux.util.Loopback
 import io.github.p1neapplexpress.openflux.util.ProcessRunner
 import java.io.File
+import java.net.Socket
 
-class Tun2SocksLauncher(private val context: Context) {
+/** [protect] should delegate to the owning VpnService's protect(Socket) - required for SplitDomainSocksProxy's bypass path to actually leave the tunnel. */
+class Tun2SocksLauncher(
+    private val context: Context,
+    private val protect: (Socket) -> Boolean = { false },
+) {
 
     companion object {
         private const val TAG = "Tun2SocksLauncher"
@@ -26,6 +32,7 @@ class Tun2SocksLauncher(private val context: Context) {
     }
 
     private var dnsRelay: DnsTcpRelay? = null
+    private var domainProxy: SplitDomainSocksProxy? = null
 
     fun start(
         fd: Int,
@@ -43,6 +50,7 @@ class Tun2SocksLauncher(private val context: Context) {
 
         val tunMtu = mtu.coerceIn(AppSettings.MIN_MTU, AppSettings.MAX_MTU)
         val settings = AppSettings(context)
+        DnsResolutionCache.reset()
 
         val nativeDir = context.applicationInfo.nativeLibraryDir
         val pdnsdBin = "$nativeDir/libpdnsd.so"
@@ -67,9 +75,26 @@ class Tun2SocksLauncher(private val context: Context) {
         )
         Thread.sleep(500L)
 
+        val domainPrefs = DomainRulesPreferences(context)
+        val tun2socksTargetPort = if (domainPrefs.isEnabled && domainPrefs.domains.isNotEmpty() && username.isNullOrEmpty()) {
+            val proxy = SplitDomainSocksProxy(
+                nativeSocksPort = socksPort,
+                ruleEngine = DomainRuleEngine(domainPrefs),
+                protect = protect,
+            ).start()
+            domainProxy = proxy
+            Logx.i(TAG, "domain routing active via 127.0.0.1:${proxy.port} -> 127.0.0.1:$socksPort")
+            proxy.port
+        } else {
+            if (domainPrefs.isEnabled && domainPrefs.domains.isNotEmpty()) {
+                Logx.w(TAG, "domain routing skipped: transport requires SOCKS5 auth, which SplitDomainSocksProxy doesn't support yet")
+            }
+            socksPort
+        }
+
         Logx.i(TAG, "starting tun2socks (mtu=$tunMtu)")
         ProcessRunner.execFireAndForget(
-            command = buildCommand(tun2socksBin, fd, socksPort, dnsPort, username, password, ipv6, udpgw, sockPath, tunMtu),
+            command = buildCommand(tun2socksBin, fd, tun2socksTargetPort, dnsPort, username, password, ipv6, udpgw, sockPath, tunMtu),
             workingDir = context.filesDir.absolutePath,
         )
         Thread.sleep(500L)
@@ -99,6 +124,9 @@ class Tun2SocksLauncher(private val context: Context) {
         ProcessRunner.killPidFile("${context.filesDir}/pdnsd.pid")
         dnsRelay?.close()
         dnsRelay = null
+        domainProxy?.stop()
+        domainProxy = null
+        DnsResolutionCache.reset()
         runCatching { File(context.applicationInfo.dataDir, "sock_path").delete() }
     }
 

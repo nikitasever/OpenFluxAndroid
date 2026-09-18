@@ -3,7 +3,9 @@ package io.github.p1neapplexpress.openflux.service
 import io.github.p1neapplexpress.openflux.util.Logx
 import io.github.p1neapplexpress.openflux.util.Loopback
 import java.io.Closeable
+import java.io.EOFException
 import java.io.IOException
+import java.io.InputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -85,8 +87,10 @@ class DnsTcpRelay(
             upstream.use {
                 client.soTimeout = IDLE_TIMEOUT_MS
                 upstream.soTimeout = IDLE_TIMEOUT_MS
-                val toUpstream = pool.submit { pump(client, upstream) }
-                pump(upstream, client)
+                val toUpstream = pool.submit { pump(client, upstream, parseDnsResponses = false) }
+                // Responses are parsed for DnsResolutionCache (see SplitDomainSocksProxy) -
+                // the wire format is unchanged, this only peeks at a copy of each frame.
+                pump(upstream, client, parseDnsResponses = true)
                 runCatching { toUpstream.get(IDLE_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS) }
             }
         }
@@ -118,12 +122,47 @@ class DnsTcpRelay(
         return null
     }
 
-    private fun pump(from: Socket, to: Socket) {
+    private fun pump(from: Socket, to: Socket, parseDnsResponses: Boolean) {
         try {
-            from.getInputStream().copyTo(to.getOutputStream())
+            val input = from.getInputStream()
+            val output = to.getOutputStream()
+            if (!parseDnsResponses) {
+                input.copyTo(output)
+            } else {
+                pumpDnsFrames(input, output)
+            }
         } catch (_: IOException) {
         } finally {
             runCatching { to.shutdownOutput() }
         }
+    }
+
+    /** Forwards length-prefixed DNS-over-TCP frames byte-for-byte, and hands each one to [DnsResolutionCache] as it passes through. */
+    private fun pumpDnsFrames(input: InputStream, output: java.io.OutputStream) {
+        val lenBuf = ByteArray(2)
+        while (true) {
+            if (!readFully(input, lenBuf)) return
+            val len = ((lenBuf[0].toInt() and 0xFF) shl 8) or (lenBuf[1].toInt() and 0xFF)
+            val msg = ByteArray(len)
+            if (len > 0 && !readFully(input, msg, allowEofAtStart = false)) return
+            output.write(lenBuf)
+            if (len > 0) output.write(msg)
+            output.flush()
+            if (len > 0) DnsResolutionCache.recordFromDnsMessage(msg)
+        }
+    }
+
+    /** Reads exactly [buf].size bytes. Returns false on a clean EOF before any byte was read (only allowed when [allowEofAtStart]); throws EOFException on a truncated frame. */
+    private fun readFully(input: InputStream, buf: ByteArray, allowEofAtStart: Boolean = true): Boolean {
+        var off = 0
+        while (off < buf.size) {
+            val n = input.read(buf, off, buf.size - off)
+            if (n < 0) {
+                if (off == 0 && allowEofAtStart) return false
+                throw EOFException("truncated DNS frame")
+            }
+            off += n
+        }
+        return true
     }
 }

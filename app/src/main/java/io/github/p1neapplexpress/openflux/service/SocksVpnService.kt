@@ -95,7 +95,7 @@ class SocksVpnService : android.net.VpnService() {
             stopEverything()
             EventBus.dispatch(AppEvent.NativeProcessExited(message))
         }
-        tun2socks = Tun2SocksLauncher(applicationContext)
+        tun2socks = Tun2SocksLauncher(applicationContext, protect = { socket -> protect(socket) })
         notifications = VpnNotificationManager(this)
     }
 

@@ -4,24 +4,20 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Stores per-domain split-tunnel rules and preset domain lists, ported from
- * FluxonAndroid's DomainRulesPreferences.
- *
- * NOT ENFORCED: nothing in VpnServiceController/Tun2SocksLauncher/DnsTcpRelay
- * reads this yet, matching upstream FluxonAndroid itself - it stores rules but
- * never applies them at the network layer either. Enforcing "bypass" here for
- * real needs the SOCKS5 layer to know which *domain* a post-DNS-resolution IP
- * belongs to (tun2socks only ever sends resolved IPs, not hostnames) and then
- * dial that connection over a VpnService.protect()'d direct socket instead of
- * the tunnel — a routing-correctness feature for a VPN whose whole purpose is
- * traffic isolation. That is worth building deliberately, with a device/
- * emulator to verify a "bypass" domain never leaks into the tunnel and a
- * "proxy" domain never leaks around it, rather than shipped unverified.
+ * Per-domain split-tunnel rules and preset domain lists, ported from
+ * FluxonAndroid's DomainRulesPreferences. Enforced by [io.github.p1neapplexpress.openflux.service.SplitDomainSocksProxy]:
+ * tun2socks only ever sees a post-DNS-resolution destination IP (not a
+ * hostname), so [io.github.p1neapplexpress.openflux.service.DnsResolutionCache]
+ * records IP -> domain from the DNS responses that already flow through
+ * DnsTcpRelay, and the proxy consults [io.github.p1neapplexpress.openflux.service.DomainRuleEngine]
+ * to decide, per connection, whether to dial out via a VpnService.protect()'d
+ * direct socket (bypass) or via the normal tunneled SOCKS5 path.
  */
 class DomainRulesPreferences(context: Context) {
 
     companion object {
         private const val PREFS_NAME = "openflux_domain_rules"
+        private const val KEY_ENABLED = "domain_rules_enabled"
         private const val KEY_MODE = "domain_mode"
         private const val KEY_DOMAINS = "domains"
 
@@ -97,6 +93,10 @@ class DomainRulesPreferences(context: Context) {
 
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    var isEnabled: Boolean
+        get() = prefs.getBoolean(KEY_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_ENABLED, value).apply()
 
     var mode: Int
         get() = prefs.getInt(KEY_MODE, MODE_BYPASS)
