@@ -150,6 +150,8 @@ class TunnelsViewModel(app: Application) : AndroidViewModel(app) {
                     tunnel.transportType,
                     tunnel.transportConnPayload.toTypedArray(),
                     tunnel.encryptionKey,
+                    tunnel.extraDocumentUrls.toTypedArray(),
+                    tunnel.poolUrl,
                 )
             } catch (e: Exception) {
                 fail("Transport failed: ${e.message}")

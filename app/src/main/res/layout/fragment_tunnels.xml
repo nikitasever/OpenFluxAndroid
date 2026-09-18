@@ -50,6 +50,21 @@
 
     </LinearLayout>
 
+    <ImageView
+        android:id="@+id/settingsButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="48dp"
+        android:layout_marginEnd="16dp"
+        android:padding="8dp"
+        android:background="@drawable/bg_config_selector"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/ic_settings"
+        app:tint="@color/text_secondary"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <TextView
         android:id="@+id/statusText"
         android:layout_width="wrap_content"
@@ -126,7 +141,7 @@
         android:id="@+id/uptimeLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
+        android:layout_marginTop="12dp"
         android:letterSpacing="0.18"
         android:text="@string/uptime_label"
         android:textAllCaps="true"
@@ -141,7 +156,7 @@
         android:id="@+id/uptimeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:fontFamily="monospace"
         android:textColor="@color/state_running"
         android:textSize="32sp"
@@ -151,6 +166,61 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:text="00:42" />
+
+    <!-- ─────── Live speed ─────── -->
+    <LinearLayout
+        android:id="@+id/speedRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_config_selector"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="5dp"
+        android:alpha="0.0"
+        app:layout_constraintTop_toBottomOf="@id/uptimeText"
+        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintVertical_bias="0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_arrow_down"
+            app:tint="@color/state_running" />
+
+        <TextView
+            android:id="@+id/speedDownText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            tools:text="0 B/s" />
+
+        <Space android:layout_width="16dp" android:layout_height="1dp" />
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_arrow_up"
+            app:tint="@color/accent_blue" />
+
+        <TextView
+            android:id="@+id/speedUpText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            tools:text="0 B/s" />
+
+    </LinearLayout>
 
     <!-- ─────── Bottom bar ─────── -->
     <LinearLayout

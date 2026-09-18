@@ -35,6 +35,27 @@ object TunnelPayload {
         }
     }
 
+    /**
+     * Same transport payload but with `--url` replaced by [url] - used to build one variant
+     * per parallel document (see ParallelTransportGroup) from a single stored payload, without
+     * re-running the whole add-tunnel form logic for each one.
+     */
+    fun withUrl(payload: List<String>, url: String): List<String> {
+        val result = payload.toMutableList()
+        var i = 0
+        while (i < result.size) {
+            val arg = result[i]
+            if (arg.startsWith("-") && arg.trimStart('-') == "url") {
+                if (i + 1 < result.size) result[i + 1] = url
+                return result
+            }
+            i++
+        }
+        // Stored payload had no --url (shouldn't happen for a URL-based transport) - append it.
+        result += listOf("--url", url)
+        return result
+    }
+
     fun parse(transportType: String, payload: List<String>): Form = Form(
         transport = TransportType.from(transportType),
         url = value(payload, "url"),
