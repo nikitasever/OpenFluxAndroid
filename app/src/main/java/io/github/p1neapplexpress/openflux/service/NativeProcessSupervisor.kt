@@ -88,6 +88,7 @@ class NativeProcessSupervisor(
                 .redirectErrorStream(true)
                 .start()
             process = p
+            runCatching { NativeProcessRegistry.register(p.pid()) }
             val output = thread(name = "OpenFluxOutput", isDaemon = true) { pumpOutput(p) }
             thread(name = "OpenFluxWatch", isDaemon = true) { watch(p, output) }
         } catch (e: Exception) {
@@ -126,6 +127,7 @@ class NativeProcessSupervisor(
         }
 
         val code = p.waitFor()
+        runCatching { NativeProcessRegistry.unregister(p.pid()) }
         if (shuttingDown.get() || process !== p) return
         output.join(STOP_GRACE_MS) // let the reader catch the fatal log line
         val reason = lastOutput?.replace(LOG_PREFIX, "")
@@ -156,6 +158,7 @@ class NativeProcessSupervisor(
     }
 
     private fun destroy(p: Process) {
+        runCatching { NativeProcessRegistry.unregister(p.pid()) }
         if (!p.isAlive) return
         p.destroy()
         handler.postDelayed({ if (p.isAlive) p.destroyForcibly() }, STOP_GRACE_MS)

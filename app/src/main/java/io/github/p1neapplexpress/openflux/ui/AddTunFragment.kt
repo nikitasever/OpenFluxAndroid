@@ -45,6 +45,7 @@ class AddTunFragment : BaseFragment() {
 
     private lateinit var transportLabel: TextView
     private lateinit var urlContainer: TextInputLayout
+    private lateinit var extraUrlsContainer: TextInputLayout
     private lateinit var maxContainer: View
     private lateinit var cupsWarning: View
 
@@ -62,11 +63,13 @@ class AddTunFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         transportLabel = view.findViewById(R.id.selectedTransport)
         urlContainer = view.findViewById(R.id.urlContainer)
+        extraUrlsContainer = view.findViewById(R.id.extraUrlsContainer)
         maxContainer = view.findViewById(R.id.maxContainer)
         cupsWarning = view.findViewById(R.id.cupsEncryptionWarning)
 
         val name = view.findViewById<TextView>(R.id.name)
         val docUrl = view.findViewById<TextView>(R.id.documentUrl)
+        val extraDocUrls = view.findViewById<TextView>(R.id.extraDocumentUrls)
         val maxToken = view.findViewById<TextView>(R.id.maxToken)
         val maxUid = view.findViewById<TextView>(R.id.maxUserId)
         val keyContainer = view.findViewById<TextInputLayout>(R.id.encryptionKeyContainer)
@@ -83,6 +86,7 @@ class AddTunFragment : BaseFragment() {
             val form = TunnelPayload.parse(initial.transportType, initial.transportConnPayload)
             name.text = initial.name
             docUrl.text = form.url
+            extraDocUrls.text = initial.extraDocumentUrls.joinToString("\n")
             maxToken.text = form.maxToken
             maxUid.text = form.maxUid
             key.text = initial.encryptionKey.orEmpty()
@@ -143,6 +147,11 @@ class AddTunFragment : BaseFragment() {
                 transportType = transport.name,
                 transportConnPayload = payload,
                 encryptionKey = rawKey.takeIf { it.isNotBlank() }?.let(EncryptionKey::normalize),
+                extraDocumentUrls = if (transport.usesUrl) {
+                    extraDocUrls.text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                } else {
+                    emptyList()
+                },
             )
 
             val old = editing
@@ -161,6 +170,7 @@ class AddTunFragment : BaseFragment() {
         transport = selected
         transportLabel.setText(labelOf(selected))
         urlContainer.isVisible = selected.usesUrl
+        extraUrlsContainer.isVisible = selected.usesUrl
         maxContainer.isVisible = !selected.usesUrl
         urlContainer.hint = getString(
             when (selected) {

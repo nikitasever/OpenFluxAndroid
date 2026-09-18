@@ -21,6 +21,7 @@ object StaleProcesses {
         File("/proc").listFiles()?.forEach { dir ->
             val pid = dir.name.toIntOrNull() ?: return@forEach
             if (pid == self) return@forEach
+            if (NativeProcessRegistry.isTracked(pid.toLong())) return@forEach
             val exe = runCatching { File(dir, "cmdline").readText().substringBefore('\u0000') }.getOrNull()
             if (exe in targets) {
                 Logx.w(TAG, "killing leftover $exe (pid $pid)")

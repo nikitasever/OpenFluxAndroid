@@ -19,7 +19,7 @@ class SocksVpnService : android.net.VpnService() {
     }
 
     private lateinit var vpn: VpnServiceController
-    private lateinit var supervisor: NativeProcessSupervisor
+    private lateinit var group: ParallelTransportGroup
     private lateinit var tun2socks: Tun2SocksLauncher
     private lateinit var notifications: VpnNotificationManager
     private val hotspot = HotspotProxyBridge()
@@ -29,13 +29,18 @@ class SocksVpnService : android.net.VpnService() {
     private val binder = object : IUnifiedService.Stub() {
         override fun isVpnRunning(): Boolean = vpn.isRunning.get()
         override fun stopVpn() = stopEverything()
-        override fun isFServiceRunning(): Boolean = supervisor.isReady
-        override fun nativeError(): String? = supervisor.error
-        override fun stopOpenFluxNative() = supervisor.stop()
+        override fun isFServiceRunning(): Boolean = group.isReady
+        override fun nativeError(): String? = group.error
+        override fun stopOpenFluxNative() = group.stop()
 
-        override fun startOpenFluxNative(transport: String?, args: Array<String>, encryptionKey: String?) {
+        override fun startOpenFluxNative(
+            transport: String?,
+            args: Array<String>,
+            encryptionKey: String?,
+            extraDocumentUrls: Array<String>,
+        ) {
             transport ?: return
-            supervisor.start(args.toList(), encryptionKey)
+            group.start(args.toList(), encryptionKey, extraDocumentUrls.toList())
         }
 
         override fun startTun2Socks() {
@@ -52,7 +57,7 @@ class SocksVpnService : android.net.VpnService() {
 
                 val ok = tun2socks.start(
                     fd = fd,
-                    socksPort = supervisor.socksPort,
+                    socksPort = group.socksPort,
                     username = i.getStringExtra(Constants.INTENT_USERNAME),
                     password = i.getStringExtra(Constants.INTENT_PASSWORD),
                     ipv6 = i.getBooleanExtra(Constants.INTENT_IPV6_PROXY, false),
@@ -62,12 +67,12 @@ class SocksVpnService : android.net.VpnService() {
 
                 if (ok) {
                     vpn.isRunning.set(true)
-                    notifications.startSpeedUpdates(supervisor.socksPort)
+                    notifications.startSpeedUpdates(group.socksPort)
                     val settings = AppSettings(this@SocksVpnService)
                     if (settings.shareLanProxy) {
                         hotspot.start(
                             lanPort = settings.lanProxyPort,
-                            targetSocksPort = supervisor.socksPort,
+                            targetSocksPort = group.socksPort,
                             authEnabled = settings.socks5AuthEnabled,
                             username = settings.socks5CustomUser,
                             password = settings.socks5CustomPass,
@@ -90,8 +95,8 @@ class SocksVpnService : android.net.VpnService() {
         super.onCreate()
         NativeBridge.ensureLoaded(applicationContext)
         vpn = VpnServiceController(this)
-        supervisor = NativeProcessSupervisor(applicationContext) { message ->
-            // Without OpenFlux the VPN would silently blackhole all traffic.
+        group = ParallelTransportGroup(applicationContext) { message ->
+            // Without any transport backend left, the VPN would silently blackhole all traffic.
             stopEverything()
             EventBus.dispatch(AppEvent.NativeProcessExited(message))
         }
@@ -133,7 +138,7 @@ class SocksVpnService : android.net.VpnService() {
         notifications.stopSpeedUpdates()
         runCatching { hotspot.stop() }
         runCatching { tun2socks.stop() }
-        runCatching { supervisor.stop() }
+        runCatching { group.stop() }
         runCatching { vpn.stop() }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

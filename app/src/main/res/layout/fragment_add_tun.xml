@@ -133,6 +133,42 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Parallel documents: connection-level load balancing across several
+             independent transport processes, one per document (see ParallelTransportGroup).
+             Same visibility rule as urlContainer - only for URL-based transports. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/extraUrlsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:boxBackgroundColor="#141924"
+            app:boxCornerRadiusBottomEnd="18dp"
+            app:boxCornerRadiusBottomStart="18dp"
+            app:boxCornerRadiusTopEnd="18dp"
+            app:boxCornerRadiusTopStart="18dp"
+            app:boxStrokeColor="#2A3240"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="1dp"
+            app:helperTextTextColor="#98A0AE"
+            app:hintTextColor="#98A0AE"
+            android:hint="@string/extra_documents"
+            app:helperText="@string/extra_documents_helper">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/extraDocumentUrls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="2"
+                android:gravity="top"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#98A0AE"
+                android:inputType="textUri|textNoSuggestions|textMultiLine"
+                android:imeOptions="actionNext" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- MAX Transport Fields -->
         <LinearLayout
             android:id="@+id/maxContainer"

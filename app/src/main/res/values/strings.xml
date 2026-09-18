@@ -37,6 +37,8 @@
     <string name="vpn_permission_required">Allow VPN permission to start transport / tun2socks</string>
     <string name="qr_scan_failed">QR code scan failed</string>
     <string name="tunnel_imported">Imported \"%1$s\"</string>
+    <string name="extra_documents">Extra documents (optional)</string>
+    <string name="extra_documents_helper">One URL per line. Each runs in parallel; new connections spread across whichever are up, so one document reconnecting doesn\'t stall the rest.</string>
     <string name="name_required">Enter a tunnel name</string>
 
     <string name="add_tunnel">Add tunnel</string>

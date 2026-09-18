@@ -87,6 +87,7 @@ class BootReceiver : BroadcastReceiver() {
                     tunnel.transportType,
                     tunnel.transportConnPayload.toTypedArray(),
                     tunnel.encryptionKey,
+                    tunnel.extraDocumentUrls.toTypedArray(),
                 )
 
                 if (!awaitReady(TRANSPORT_TIMEOUT_MS) { bound.isFServiceRunning() }) {
