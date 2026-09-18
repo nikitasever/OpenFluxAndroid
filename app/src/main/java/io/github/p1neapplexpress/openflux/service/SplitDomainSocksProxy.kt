@@ -96,6 +96,7 @@ class SplitDomainSocksProxy(
             }
 
             val decision = ruleEngine.decide(target.address.hostAddress ?: "")
+            Logx.i(TAG, "$decision -> $target (domains=${DnsResolutionCache.domainsFor(target.address.hostAddress ?: "")})")
             val upstream = runCatching {
                 when (decision) {
                     RouteDecision.BYPASS -> dialDirect(target)
