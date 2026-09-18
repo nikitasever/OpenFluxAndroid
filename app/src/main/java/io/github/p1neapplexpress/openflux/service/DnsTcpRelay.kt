@@ -10,27 +10,45 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLSocketFactory
 
 /**
  * Accepts pdnsd's DNS-over-TCP connections on 127.0.0.1 and carries each one
  * through the OpenFlux SOCKS5 proxy to a public resolver. The app is excluded
  * from its own VPN, so without this pdnsd would ask the resolver directly,
  * outside the tunnel, where DNS is easy to block or spoof.
+ *
+ * When [useTls] is set, the SOCKS5-tunneled TCP connection to each upstream is
+ * upgraded to TLS on connect (DNS-over-TLS, RFC 7858 — its wire format is
+ * identical to plain DNS-over-TCP: a 2-byte big-endian length prefix followed
+ * by the message), so resolution is encrypted end-to-end as well as tunneled.
  */
 class DnsTcpRelay(
     private val socksPort: Int,
     private val upstreams: List<InetSocketAddress> = DEFAULT_UPSTREAMS,
+    private val useTls: Boolean = false,
     private val connectTimeoutMs: Int = 10_000,
 ) : Closeable {
 
     companion object {
         private const val TAG = "DnsTcpRelay"
         private const val IDLE_TIMEOUT_MS = 30_000
+        private const val DOT_PORT = 853
 
         val DEFAULT_UPSTREAMS = listOf(
             InetSocketAddress(InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)), 53),
             InetSocketAddress(InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)), 53),
         )
+
+        fun upstreamsFor(primaryDns: String, secondaryDns: String, useTls: Boolean): List<InetSocketAddress> {
+            val port = if (useTls) DOT_PORT else 53
+            return listOf(primaryDns, secondaryDns)
+                .distinct()
+                .mapNotNull { host ->
+                    runCatching { InetSocketAddress(InetAddress.getByName(host), port) }.getOrNull()
+                }
+                .ifEmpty { DEFAULT_UPSTREAMS }
+        }
     }
 
     private val server = ServerSocket(0, 50, Loopback.IPV4)
@@ -77,8 +95,23 @@ class DnsTcpRelay(
     private fun connectUpstream(): Socket? {
         for (target in upstreams) {
             try {
-                return Socks5.connect(socksPort, target, connectTimeoutMs)
+                val plain = Socks5.connect(socksPort, target, connectTimeoutMs)
+                if (!useTls) return plain
+                return runCatching {
+                    SSLSocketFactory.getDefault().createSocket(
+                        plain,
+                        target.hostString,
+                        target.port,
+                        true,
+                    )
+                }.getOrElse {
+                    Logx.w(TAG, "DoT handshake to $target failed: ${it.message}")
+                    runCatching { plain.close() }
+                    throw it
+                }
             } catch (e: IOException) {
+                Logx.w(TAG, "DNS via tunnel to $target failed: ${e.message}")
+            } catch (e: javax.net.ssl.SSLException) {
                 Logx.w(TAG, "DNS via tunnel to $target failed: ${e.message}")
             }
         }

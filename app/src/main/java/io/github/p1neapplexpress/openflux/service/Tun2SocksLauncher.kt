@@ -2,6 +2,7 @@ package io.github.p1neapplexpress.openflux.service
 
 import android.content.Context
 import io.github.p1neapplexpress.openflux.NativeBridge
+import io.github.p1neapplexpress.openflux.util.AppSettings
 import io.github.p1neapplexpress.openflux.util.Logx
 import io.github.p1neapplexpress.openflux.util.Loopback
 import io.github.p1neapplexpress.openflux.util.ProcessRunner
@@ -17,7 +18,6 @@ class Tun2SocksLauncher(private val context: Context) {
         private const val NETIF_IPADDR = "26.26.26.2"
         private const val NETIF_NETMASK = "255.255.255.0"
         private const val NETIF_IP6ADDR = "fdfe:dcba:9876::2"
-        private const val TUN_MTU = 1500
         private const val LOG_LEVEL = "3"
 
         // VPN interface address (VpnServiceController). tun2socks re-injects DNS
@@ -34,11 +34,15 @@ class Tun2SocksLauncher(private val context: Context) {
         password: String?,
         ipv6: Boolean,
         udpgw: String?,
+        mtu: Int = AppSettings.DEFAULT_MTU,
     ): Boolean {
         if (fd <= 0) {
             Logx.e(TAG, "invalid tun fd: $fd")
             return false
         }
+
+        val tunMtu = mtu.coerceIn(AppSettings.MIN_MTU, AppSettings.MAX_MTU)
+        val settings = AppSettings(context)
 
         val nativeDir = context.applicationInfo.nativeLibraryDir
         val pdnsdBin = "$nativeDir/libpdnsd.so"
@@ -50,21 +54,22 @@ class Tun2SocksLauncher(private val context: Context) {
             setReadable(true, false)
         }
 
-        val relay = DnsTcpRelay(socksPort).start()
+        val upstreams = DnsTcpRelay.upstreamsFor(settings.primaryDns, settings.secondaryDns, settings.dotEnabled)
+        val relay = DnsTcpRelay(socksPort, upstreams, useTls = settings.dotEnabled).start()
         dnsRelay = relay
         val dnsPort = Loopback.freeTcpPort()
 
         makePdnsdConf(listenPort = dnsPort, upstreamPort = relay.port)
-        Logx.i(TAG, "starting pdnsd (DNS via tunnel)")
+        Logx.i(TAG, "starting pdnsd (DNS via tunnel${if (settings.dotEnabled) ", DoT" else ""})")
         ProcessRunner.execFireAndForget(
             command = listOf(pdnsdBin, "-c", "${context.filesDir}/pdnsd.conf"),
             workingDir = context.filesDir.absolutePath,
         )
         Thread.sleep(500L)
 
-        Logx.i(TAG, "starting tun2socks")
+        Logx.i(TAG, "starting tun2socks (mtu=$tunMtu)")
         ProcessRunner.execFireAndForget(
-            command = buildCommand(tun2socksBin, fd, socksPort, dnsPort, username, password, ipv6, udpgw, sockPath),
+            command = buildCommand(tun2socksBin, fd, socksPort, dnsPort, username, password, ipv6, udpgw, sockPath, tunMtu),
             workingDir = context.filesDir.absolutePath,
         )
         Thread.sleep(500L)
@@ -107,13 +112,14 @@ class Tun2SocksLauncher(private val context: Context) {
         ipv6: Boolean,
         udpgw: String?,
         sockPath: File,
+        mtu: Int,
     ): List<String> = buildList {
         add(bin)
         add("--netif-ipaddr"); add(NETIF_IPADDR)
         add("--netif-netmask"); add(NETIF_NETMASK)
         add("--socks-server-addr"); add("127.0.0.1:$socksPort")
         add("--tunfd"); add(fd.toString())
-        add("--tunmtu"); add(TUN_MTU.toString())
+        add("--tunmtu"); add(mtu.toString())
         add("--loglevel"); add(LOG_LEVEL)
         add("--pid"); add("${context.filesDir}/tun2socks.pid")
         add("--sock"); add(sockPath.absolutePath)

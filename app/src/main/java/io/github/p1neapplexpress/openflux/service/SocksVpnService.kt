@@ -7,6 +7,7 @@ import io.github.p1neapplexpress.openflux.IUnifiedService
 import io.github.p1neapplexpress.openflux.event.AppEvent
 import io.github.p1neapplexpress.openflux.event.EventBus
 import io.github.p1neapplexpress.openflux.NativeBridge
+import io.github.p1neapplexpress.openflux.util.AppSettings
 import io.github.p1neapplexpress.openflux.util.Constants
 import io.github.p1neapplexpress.openflux.util.Logx
 
@@ -21,6 +22,7 @@ class SocksVpnService : android.net.VpnService() {
     private lateinit var supervisor: NativeProcessSupervisor
     private lateinit var tun2socks: Tun2SocksLauncher
     private lateinit var notifications: VpnNotificationManager
+    private val hotspot = HotspotProxyBridge()
 
     private var lastIntent: Intent? = null
 
@@ -55,11 +57,22 @@ class SocksVpnService : android.net.VpnService() {
                     password = i.getStringExtra(Constants.INTENT_PASSWORD),
                     ipv6 = i.getBooleanExtra(Constants.INTENT_IPV6_PROXY, false),
                     udpgw = i.getStringExtra(Constants.INTENT_UDP_GW),
+                    mtu = i.getIntExtra(Constants.INTENT_MTU, AppSettings.DEFAULT_MTU),
                 )
 
                 if (ok) {
                     vpn.isRunning.set(true)
                     notifications.startSpeedUpdates()
+                    val settings = AppSettings(this@SocksVpnService)
+                    if (settings.shareLanProxy) {
+                        hotspot.start(
+                            lanPort = settings.lanProxyPort,
+                            targetSocksPort = supervisor.socksPort,
+                            authEnabled = settings.socks5AuthEnabled,
+                            username = settings.socks5CustomUser,
+                            password = settings.socks5CustomPass,
+                        )
+                    }
                     EventBus.dispatch(AppEvent.LogMessage("[I] tun2socks running"))
                     Logx.i(TAG, "tun2socks running")
                 } else {
@@ -118,6 +131,7 @@ class SocksVpnService : android.net.VpnService() {
     private fun stopEverything() {
         Logx.i(TAG, "stopEverything")
         notifications.stopSpeedUpdates()
+        runCatching { hotspot.stop() }
         runCatching { tun2socks.stop() }
         runCatching { supervisor.stop() }
         runCatching { vpn.stop() }
