@@ -23,6 +23,25 @@
             android:textSize="24sp"
             android:fontFamily="sans-serif-light" />
 
+        <!-- Apps -->
+        <TextView style="@style/SettingsSectionHeader" android:text="@string/split_tunnel_title" />
+
+        <LinearLayout
+            android:id="@+id/appRoutingRow"
+            style="@style/SettingsRow"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/split_tunnel_title" />
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_chevron_down"
+                android:rotation="-90"
+                app:tint="@color/text_secondary" />
+        </LinearLayout>
+        <TextView style="@style/SettingsHelper" android:text="@string/split_tunnel_enable_helper" />
+
         <!-- Network -->
         <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_network" />
 

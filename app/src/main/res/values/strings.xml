@@ -122,6 +122,18 @@
         <item>Custom</item>
     </string-array>
 
+    <string name="split_tunnel_title">App Routing</string>
+    <string name="split_tunnel_enable">Route apps individually</string>
+    <string name="split_tunnel_enable_helper">Off: every app uses the tunnel as usual</string>
+    <string name="split_tunnel_mode_bypass">Selected apps bypass tunnel</string>
+    <string name="split_tunnel_mode_proxy">Only selected apps use tunnel</string>
+    <string name="split_tunnel_search_hint">Search apps</string>
+    <string name="split_tunnel_preset_ru">RU preset</string>
+    <string name="split_tunnel_select_all">Select all</string>
+    <string name="split_tunnel_clear">Clear</string>
+    <string name="split_tunnel_show_system">Show system apps</string>
+    <string name="split_tunnel_selected_count">%1$d of %2$d selected</string>
+
     <string-array name="ip_stack_modes">
         <item>Auto</item>
         <item>IPv4 only</item>

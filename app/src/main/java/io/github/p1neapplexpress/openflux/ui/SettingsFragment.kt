@@ -36,6 +36,13 @@ class SettingsFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
         settings = AppSettings(requireContext())
 
+        view.findViewById<View>(R.id.appRoutingRow).setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.main, SplitTunnelFragment())
+                .addToBackStack("split_tunnel")
+                .commit()
+        }
+
         val mtuInput = view.findViewById<EditText>(R.id.mtuInput)
         val bypassLanSwitch = view.findViewById<Switch>(R.id.bypassLanSwitch)
         val killSwitchSwitch = view.findViewById<Switch>(R.id.killSwitchSwitch)

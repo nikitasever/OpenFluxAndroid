@@ -12,6 +12,15 @@
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Package visibility (Android 11+): needed for the split-tunnel app
+         picker to enumerate launchable apps via PackageManager. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".OpenFluxApp"
         android:allowBackup="false"
