@@ -120,9 +120,20 @@ class SplitDomainSocksProxy(
         }
     }
 
+    /**
+     * A plain `Socket()` doesn't allocate its underlying native fd until the
+     * first real I/O (connect/bind), and VpnService.protect(Socket) needs a
+     * live fd to apply to - calling it too early on a bare Socket silently
+     * fails. SocketChannel.open() allocates its fd immediately on creation,
+     * so protect() always has something real to act on.
+     */
     private fun dialDirect(target: InetSocketAddress): Socket {
-        val socket = Socket()
-        if (!protect(socket)) throw IOException("VpnService.protect() failed for $target")
+        val channel = java.nio.channels.SocketChannel.open()
+        val socket = channel.socket()
+        if (!protect(socket)) {
+            runCatching { channel.close() }
+            throw IOException("VpnService.protect() failed for $target")
+        }
         socket.connect(target, connectTimeoutMs)
         return socket
     }
