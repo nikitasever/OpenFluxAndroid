@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import io.github.p1neapplexpress.openflux.R
 import io.github.p1neapplexpress.openflux.data.Tunnel
+import io.github.p1neapplexpress.openflux.data.TunnelLink
 import io.github.p1neapplexpress.openflux.util.QrGenerator
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -43,8 +44,11 @@ object QrShareDialog {
             .create()
 
         view.findViewById<android.view.View>(R.id.btnCopy).setOnClickListener {
+            // The link (not the raw JSON) - it's what's actually useful pasted into a
+            // chat app: tapping it on another OpenFlux install opens straight to import.
+            val link = TunnelLink.encode(tunnel)
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            cm.setPrimaryClip(ClipData.newPlainText(tunnel.name, payload))
+            cm.setPrimaryClip(ClipData.newPlainText(tunnel.name, link))
             Toast.makeText(context, R.string.qr_share_copied, Toast.LENGTH_SHORT).show()
         }
 

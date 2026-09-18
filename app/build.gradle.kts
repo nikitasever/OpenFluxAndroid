@@ -26,6 +26,24 @@ android {
         aidl = true
     }
 
+    // Release signing comes from env vars only (set by CI from GitHub Secrets, or
+    // exported locally by whoever holds the keystore) - never from a file checked
+    // into the repo. Without them, `assembleRelease` still produces an unsigned
+    // APK rather than failing the whole build, so a normal dev checkout is unaffected.
+    val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+    val hasReleaseSigning = !releaseKeystorePath.isNullOrEmpty()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -34,6 +52,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false

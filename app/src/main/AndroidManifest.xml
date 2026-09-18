@@ -42,6 +42,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- openflux://import?t=<base64 Tunnel JSON> - lets a shared config link
+                 (e.g. pasted in a chat app) open straight into an import prompt,
+                 same payload the QR code carries. See TunnelLink.kt. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="openflux" android:host="import" />
+            </intent-filter>
         </activity>
 
         <service

@@ -44,3 +44,52 @@ jobs:
           name: openflux-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  build-release:
+    runs-on: ubuntu-latest
+    # Only runs once the repo has a real release keystore configured (see
+    # docs/release-signing.md for how to generate and register one). Until
+    # then this job is skipped entirely - the debug build above still runs.
+    env:
+      HAS_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HAS_KEYSTORE == 'true'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install SDK platform and build-tools
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Grant execute permission for gradlew
+        if: env.HAS_KEYSTORE == 'true'
+        run: chmod +x gradlew
+
+      - name: Decode release keystore
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Upload signed APK
+        if: env.HAS_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openflux-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

@@ -32,6 +32,7 @@ import io.github.p1neapplexpress.openflux.R
 import io.github.p1neapplexpress.openflux.data.Tunnel
 import io.github.p1neapplexpress.openflux.data.TunnelState
 import io.github.p1neapplexpress.openflux.event.AppEvent
+import io.github.p1neapplexpress.openflux.event.DeepLinkImport
 import io.github.p1neapplexpress.openflux.ui.widget.AuroraView
 import io.github.p1neapplexpress.openflux.ui.widget.PulseRingsView
 import io.github.p1neapplexpress.openflux.util.toUptimeHms
@@ -81,10 +82,21 @@ class TunnelsFragment : BaseFragment() {
         val raw = (result as? QRResult.QRSuccess)?.content?.rawValue
             ?: return@registerForActivityResult
         runCatching { qrJson.decodeFromString<Tunnel>(raw) }
-            .onSuccess { vm.addTunnel(it); requestVpnAndStart(it) }
+            .onSuccess { importTunnel(it) }
             .onFailure {
                 Toast.makeText(requireContext(), R.string.qr_scan_failed, Toast.LENGTH_LONG).show()
             }
+    }
+
+    /** Shared by the QR scanner and `openflux://import` deep links - both hand us a ready-to-use Tunnel. */
+    private fun importTunnel(tunnel: Tunnel) {
+        vm.addTunnel(tunnel)
+        requestVpnAndStart(tunnel)
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.tunnel_imported, tunnel.name),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
 
     // QR codes may come from newer app versions with fields this one doesn't know.
@@ -158,6 +170,14 @@ class TunnelsFragment : BaseFragment() {
                 launch { vm.active.collect { applyState(it) } }
                 launch { vm.uptimeSeconds.collect { renderUptime(it) } }
                 launch { vm.selected.collect { renderSelected(it) } }
+                launch {
+                    DeepLinkImport.pending.collect { tunnel ->
+                        if (tunnel != null) {
+                            importTunnel(tunnel)
+                            DeepLinkImport.consume()
+                        }
+                    }
+                }
             }
         }
     }
