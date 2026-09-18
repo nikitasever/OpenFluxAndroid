@@ -88,7 +88,7 @@ class NativeProcessSupervisor(
                 .redirectErrorStream(true)
                 .start()
             process = p
-            runCatching { NativeProcessRegistry.register(p.pid()) }
+            pidOf(p)?.let(NativeProcessRegistry::register)
             val output = thread(name = "OpenFluxOutput", isDaemon = true) { pumpOutput(p) }
             thread(name = "OpenFluxWatch", isDaemon = true) { watch(p, output) }
         } catch (e: Exception) {
@@ -127,7 +127,7 @@ class NativeProcessSupervisor(
         }
 
         val code = p.waitFor()
-        runCatching { NativeProcessRegistry.unregister(p.pid()) }
+        pidOf(p)?.let(NativeProcessRegistry::unregister)
         if (shuttingDown.get() || process !== p) return
         output.join(STOP_GRACE_MS) // let the reader catch the fatal log line
         val reason = lastOutput?.replace(LOG_PREFIX, "")
@@ -158,11 +158,23 @@ class NativeProcessSupervisor(
     }
 
     private fun destroy(p: Process) {
-        runCatching { NativeProcessRegistry.unregister(p.pid()) }
+        pidOf(p)?.let(NativeProcessRegistry::unregister)
         if (!p.isAlive) return
         p.destroy()
         handler.postDelayed({ if (p.isAlive) p.destroyForcibly() }, STOP_GRACE_MS)
     }
+
+    /**
+     * android.jar's compile-time stub doesn't declare java.lang.Process.pid() (Java 9+),
+     * even though it's genuinely present at runtime on minSdk 26+ (Android's own
+     * java.lang.Process implementation). Reflection sidesteps that compile-time gap;
+     * returns null instead of throwing if it's ever unavailable for some reason - losing
+     * the [NativeProcessRegistry] exemption just means [StaleProcesses] treats this one
+     * process as any other, which is safe, just not ideal for parallel documents.
+     */
+    private fun pidOf(process: Process): Long? = runCatching {
+        process.javaClass.getMethod("pid").invoke(process) as Long
+    }.getOrNull()
 
     private fun writeKey(key: String): String {
         val file = keyFile
