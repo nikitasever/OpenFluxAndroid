@@ -179,9 +179,13 @@ class NativeProcessSupervisor(
     private fun pidOf(process: Process): Long? {
         runCatching { return process.javaClass.getMethod("pid").invoke(process) as Long }
         runCatching {
-            val field = generateSequence(process.javaClass) { it.superclass }
-                .firstNotNullOfOrNull { c -> c.declaredFields.find { it.name == "pid" } }
-                ?: return@runCatching
+            var cls: Class<*>? = process.javaClass
+            var field: java.lang.reflect.Field? = null
+            while (cls != null && field == null) {
+                field = cls.declaredFields.find { it.name == "pid" }
+                cls = cls.superclass
+            }
+            field ?: return@runCatching
             field.isAccessible = true
             return (field.get(process) as? Number)?.toLong() ?: return@runCatching
         }
