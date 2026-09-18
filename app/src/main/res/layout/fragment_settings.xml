@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen_ambient"
+    android:clipToPadding="false"
+    android:paddingTop="48dp"
+    android:paddingBottom="32dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:text="@string/settings_title"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:fontFamily="sans-serif-light" />
+
+        <!-- Network -->
+        <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_network" />
+
+        <EditText
+            android:id="@+id/mtuInput"
+            style="@style/SettingsInput"
+            android:hint="@string/settings_mtu"
+            android:inputType="number"
+            android:maxLength="4" />
+        <TextView style="@style/SettingsHelper" android:text="@string/settings_mtu_helper" />
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_bypass_lan" />
+            <Switch android:id="@+id/bypassLanSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <TextView style="@style/SettingsHelper" android:text="@string/settings_bypass_lan_helper" />
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_kill_switch" />
+            <Switch android:id="@+id/killSwitchSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <TextView style="@style/SettingsHelper" android:text="@string/settings_kill_switch_helper" />
+
+        <TextView style="@style/SettingsRowLabel" android:layout_marginTop="12dp" android:text="@string/settings_ip_stack" />
+        <Spinner
+            android:id="@+id/ipStackSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:entries="@array/ip_stack_modes" />
+
+        <!-- DNS -->
+        <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_dns" />
+
+        <TextView style="@style/SettingsRowLabel" android:text="@string/settings_dns_mode" />
+        <Spinner
+            android:id="@+id/dnsModeSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:entries="@array/dns_modes" />
+
+        <EditText
+            android:id="@+id/dnsPrimaryInput"
+            style="@style/SettingsInput"
+            android:hint="@string/settings_dns_custom_primary"
+            android:inputType="textNoSuggestions" />
+
+        <EditText
+            android:id="@+id/dnsSecondaryInput"
+            style="@style/SettingsInput"
+            android:hint="@string/settings_dns_custom_secondary"
+            android:inputType="textNoSuggestions" />
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_dot" />
+            <Switch android:id="@+id/dotSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <TextView style="@style/SettingsHelper" android:text="@string/settings_dot_helper" />
+
+        <!-- Hotspot -->
+        <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_hotspot" />
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_hotspot_enable" />
+            <Switch android:id="@+id/hotspotSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <TextView style="@style/SettingsHelper" android:text="@string/settings_hotspot_helper" />
+
+        <EditText
+            android:id="@+id/hotspotPortInput"
+            style="@style/SettingsInput"
+            android:hint="@string/settings_hotspot_port"
+            android:inputType="number"
+            android:maxLength="5" />
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_hotspot_auth" />
+            <Switch android:id="@+id/hotspotAuthSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Misc -->
+        <TextView style="@style/SettingsSectionHeader" android:text="@string/settings_misc" />
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_show_speed" />
+            <Switch android:id="@+id/showSpeedSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_verbose_log" />
+            <Switch android:id="@+id/verboseLogSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/SettingsRow">
+            <TextView style="@style/SettingsRowLabel" android:text="@string/settings_auto_boot" />
+            <Switch android:id="@+id/autoBootSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

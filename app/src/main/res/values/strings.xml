@@ -77,4 +77,46 @@
     <string name="notify_msg_running">Tunnel is active</string>
     <string name="notify_msg_error">Error</string>
     <string name="notify_channel_desc">VPN service status</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_network">Network</string>
+    <string name="settings_mtu">MTU</string>
+    <string name="settings_mtu_helper">1280–1500, lower if the tunnel drops packets</string>
+    <string name="settings_bypass_lan">Bypass LAN traffic</string>
+    <string name="settings_bypass_lan_helper">Keep local network traffic off the tunnel</string>
+    <string name="settings_kill_switch">Kill switch</string>
+    <string name="settings_kill_switch_helper">Block all traffic if the tunnel drops (Android 10+)</string>
+    <string name="settings_ip_stack">IP stack</string>
+    <string name="settings_dns">DNS</string>
+    <string name="settings_dns_mode">Resolver</string>
+    <string name="settings_dns_custom_primary">Primary DNS</string>
+    <string name="settings_dns_custom_secondary">Secondary DNS</string>
+    <string name="settings_dot">DNS-over-TLS</string>
+    <string name="settings_dot_helper">Encrypt DNS queries to the resolver above (port 853)</string>
+    <string name="settings_hotspot">Hotspot sharing</string>
+    <string name="settings_hotspot_enable">Share tunnel over Wi-Fi</string>
+    <string name="settings_hotspot_helper">Exposes a SOCKS5 proxy to your LAN while connected</string>
+    <string name="settings_hotspot_port">LAN proxy port</string>
+    <string name="settings_hotspot_auth">Require username/password</string>
+    <string name="settings_misc">Other</string>
+    <string name="settings_show_speed">Show speed in notification</string>
+    <string name="settings_verbose_log">Verbose logging</string>
+    <string name="settings_auto_boot">Auto-connect on boot</string>
+    <string name="settings_invalid_mtu">MTU must be between 1280 and 1500</string>
+    <string name="settings_invalid_port">Enter a valid port (1–65535)</string>
+
+    <string-array name="dns_modes">
+        <item>Cloudflare (1.1.1.1)</item>
+        <item>Google (8.8.8.8)</item>
+        <item>AdGuard (94.140.14.14)</item>
+        <item>Quad9 (9.9.9.9)</item>
+        <item>Yandex (77.88.8.8)</item>
+        <item>Custom</item>
+    </string-array>
+
+    <string-array name="ip_stack_modes">
+        <item>Auto</item>
+        <item>IPv4 only</item>
+        <item>IPv6</item>
+    </string-array>
 </resources>
