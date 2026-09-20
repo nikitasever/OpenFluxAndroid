@@ -28,7 +28,17 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class ParallelSocksProxy(
     @Volatile private var backends: List<NativeProcessSupervisor>,
-    private val connectTimeoutMs: Int = 10_000,
+    // Kept short deliberately: a live incident traced "everything times out even
+    // though the pool has a healthy backend" to this timeout being too generous.
+    // With N backends, a single dial can cost up to N * connectTimeoutMs before
+    // dialAnyBackend() gives up entirely - at the old 10s default, two backends
+    // meant up to 20s for one CONNECT, well past Android's own ~12s DNS
+    // resolution timeout (confirmed via NetdEventListenerService logs showing
+    // 12000-20000ms TIMEOUTs). A healthy backend answers a local SOCKS5 CONNECT
+    // in well under a second even through the transport's WS relay, so a stuck
+    // one is worth abandoning quickly rather than treating it like normal
+    // network latency.
+    private val connectTimeoutMs: Int = 4_000,
 ) {
     companion object {
         private const val TAG = "ParallelSocksProxy"
