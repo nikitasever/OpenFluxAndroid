@@ -53,11 +53,18 @@ class ParallelSocksProxy(
         private const val ATYP_DOMAIN = 0x03
         private const val ATYP_IPV6 = 0x04
 
-        // High enough that a handful of genuinely unreachable targets - or a network the
-        // transport simply cannot reach right now - doesn't condemn a backend into the
-        // restart path, which is costly enough to be worth delaying (see
-        // ParallelTransportGroup.RESTART_COOLDOWN_MS).
+        // Note this is a burst count, not a rate: tun2socks opens many connections at once, so
+        // a backend that cannot relay collects a dozen failures in about a second. That is fine
+        // for deciding "this backend is not working", but it means the count alone cannot tell
+        // a wedged backend from one that simply has not finished joining its document yet -
+        // hence BACKEND_GRACE_MS below.
         private const val UNHEALTHY_AFTER_FAILURES = 12
+
+        // A freshly-ready backend is off limits for this long. Without it the startup burst
+        // condemned every backend about five seconds after it came up - killing the transport
+        // mid-handshake, every single time, and starting a replacement that overlapped the
+        // original as a second participant in the same document.
+        private const val BACKEND_GRACE_MS = 30_000L
     }
 
     private var server: java.net.ServerSocket? = null
@@ -154,6 +161,10 @@ class ParallelSocksProxy(
             if (socket != null) {
                 backend.resetDialFailures()
                 return socket
+            }
+            if (backend.readyForMs() < BACKEND_GRACE_MS) {
+                backend.resetDialFailures()
+                continue
             }
             if (backend.noteDialFailure() >= UNHEALTHY_AFTER_FAILURES) {
                 // Reset so the next report needs a fresh streak: the handler may decline to act

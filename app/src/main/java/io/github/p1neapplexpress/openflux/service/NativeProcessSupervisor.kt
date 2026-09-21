@@ -46,6 +46,9 @@ class NativeProcessSupervisor(
     private val dialFailures = java.util.concurrent.atomic.AtomicInteger(0)
 
     @Volatile
+    private var readySince = 0L
+
+    @Volatile
     private var process: Process? = null
 
     @Volatile
@@ -76,6 +79,19 @@ class NativeProcessSupervisor(
 
     fun resetDialFailures() = dialFailures.set(0)
 
+    /**
+     * How long this backend has been [isReady], or 0 if it isn't.
+     *
+     * Becoming ready only means the local SOCKS5 port opened; the transport still has to fetch
+     * the document, complete a WebSocket handshake and get its collaborative-editing session
+     * accepted before it can relay anything. Dials that fail during that window say nothing
+     * about its health - and tun2socks opens a burst of them the moment the tunnel comes up.
+     */
+    fun readyForMs(): Long {
+        val since = readySince
+        return if (ready.get() && since != 0L) SystemClock.elapsedRealtime() - since else 0L
+    }
+
     private val keyFile: File get() = File(context.noBackupFilesDir, KEY_FILE)
 
     fun start(payload: List<String>, encryptionKey: String?) {
@@ -85,6 +101,7 @@ class NativeProcessSupervisor(
         }
         shuttingDown.set(false)
         ready.set(false)
+        readySince = 0L
         dialFailures.set(0)
         error = null
         lastOutput = null
@@ -126,6 +143,7 @@ class NativeProcessSupervisor(
         val deadline = SystemClock.elapsedRealtime() + READY_TIMEOUT_MS
         while (!shuttingDown.get() && p.isAlive) {
             if (Loopback.canConnect(socksPort, CONNECT_PROBE_MS)) {
+                readySince = SystemClock.elapsedRealtime()
                 ready.set(true)
                 // OpenFlux reads the key before it starts listening.
                 deleteKey()
