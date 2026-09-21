@@ -1,2 +1,2 @@
-OpenFlux 04403f2
+OpenFlux 6b17a58
 go version go1.26.4 linux/amd64
