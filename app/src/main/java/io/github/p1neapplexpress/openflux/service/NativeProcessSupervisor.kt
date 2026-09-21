@@ -43,6 +43,7 @@ class NativeProcessSupervisor(
     private val running = AtomicBoolean(false)
     private val ready = AtomicBoolean(false)
     private val shuttingDown = AtomicBoolean(false)
+    private val dialFailures = java.util.concurrent.atomic.AtomicInteger(0)
 
     @Volatile
     private var process: Process? = null
@@ -62,6 +63,19 @@ class NativeProcessSupervisor(
 
     val isReady: Boolean get() = ready.get()
 
+    /**
+     * Records a failed SOCKS5 dial through this backend and returns the new consecutive-failure
+     * count; [resetDialFailures] clears it after a success.
+     *
+     * [isReady] deliberately cannot detect this on its own: it means "the local SOCKS5 port
+     * accepts connections", which stays true for a process whose document session died
+     * server-side - the binary keeps running and keeps listening, it just can't relay anything.
+     * Dials are the only signal the app has that reflects the tunnel rather than the listener.
+     */
+    fun noteDialFailure(): Int = dialFailures.incrementAndGet()
+
+    fun resetDialFailures() = dialFailures.set(0)
+
     private val keyFile: File get() = File(context.noBackupFilesDir, KEY_FILE)
 
     fun start(payload: List<String>, encryptionKey: String?) {
@@ -71,6 +85,7 @@ class NativeProcessSupervisor(
         }
         shuttingDown.set(false)
         ready.set(false)
+        dialFailures.set(0)
         error = null
         lastOutput = null
 

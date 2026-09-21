@@ -1,6 +1,7 @@
 package io.github.p1neapplexpress.openflux.service
 
 import android.content.Context
+import android.os.SystemClock
 import io.github.p1neapplexpress.openflux.data.TunnelPayload
 import io.github.p1neapplexpress.openflux.util.Logx
 import java.util.concurrent.atomic.AtomicInteger
@@ -22,6 +23,12 @@ class ParallelTransportGroup(
 ) {
     companion object {
         private const val TAG = "ParallelTransportGroup"
+
+        // A restarted backend needs time to rejoin its document before its dials mean anything,
+        // and a phone that is simply offline fails every dial on every backend - without this
+        // the whole pool would be torn down and respawned over and over while it waits for
+        // connectivity to come back.
+        private const val RESTART_COOLDOWN_MS = 60_000L
     }
 
     private var supervisors: List<NativeProcessSupervisor> = emptyList()
@@ -33,6 +40,7 @@ class ParallelTransportGroup(
     // behind a ParallelSocksProxy - even for a single document - so socksPort never has to
     // change as documents get swapped in/out later by reconcilePool().
     private val poolSupervisors = java.util.concurrent.ConcurrentHashMap<String, NativeProcessSupervisor>()
+    private val poolRestartAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private var poolProxy: ParallelSocksProxy? = null
     private var poolBasePayload: List<String>? = null
     private var poolEncryptionKey: String? = null
@@ -82,7 +90,10 @@ class ParallelTransportGroup(
         poolBasePayload = basePayload
         poolEncryptionKey = encryptionKey
         initialUrls.forEach(::addPoolDocument)
-        socksPort = ParallelSocksProxy(poolSupervisors.values.toList()).start().also { poolProxy = it }.port
+        socksPort = ParallelSocksProxy(
+            poolSupervisors.values.toList(),
+            onBackendUnhealthy = ::onPoolBackendUnhealthy,
+        ).start().also { poolProxy = it }.port
         Logx.i(TAG, "pool mode: running ${poolSupervisors.size} document(s)")
     }
 
@@ -94,8 +105,8 @@ class ParallelTransportGroup(
         if (added.isEmpty() && removed.isEmpty()) return
 
         added.forEach(::addPoolDocument)
-        poolProxy?.updateBackends(poolSupervisors.values.toList())
         removed.forEach(::removePoolDocument)
+        poolProxy?.updateBackends(poolSupervisors.values.toList())
         Logx.i(TAG, "pool reconciled: +${added.size} -${removed.size}, now ${poolSupervisors.size} document(s)")
     }
 
@@ -108,6 +119,36 @@ class ParallelTransportGroup(
 
     private fun removePoolDocument(url: String) {
         poolSupervisors.remove(url)?.stop()
+        poolRestartAt.remove(url)
+    }
+
+    /**
+     * Restarts the one document whose dials keep failing, reported by [ParallelSocksProxy].
+     *
+     * Nothing else in the group can notice this state: the process is still alive - only its
+     * collaborative-editing session died - so [onPoolBackendExit] never fires, the backend stays
+     * [NativeProcessSupervisor.isReady] forever, and it keeps being handed connections it can
+     * never complete. Restarting rejoins the same document; if the document itself is gone the
+     * new process fails to start and takes the normal exit path instead, and the server-side
+     * pool manager swaps the URL out from under us soon after.
+     */
+    private fun onPoolBackendUnhealthy(supervisor: NativeProcessSupervisor) {
+        val basePayload = poolBasePayload ?: return
+        val url = poolSupervisors.entries.firstOrNull { it.value === supervisor }?.key ?: return
+
+        val now = SystemClock.elapsedRealtime()
+        if (poolRestartAt[url]?.let { now - it < RESTART_COOLDOWN_MS } == true) return
+
+        val replacement = NativeProcessSupervisor(context, ::onPoolBackendExit)
+        // Compare-and-set: a concurrent reconcilePool() may have just dropped this document,
+        // and resurrecting it here would put back a URL the server no longer publishes.
+        if (!poolSupervisors.replace(url, supervisor, replacement)) return
+        poolRestartAt[url] = now
+
+        Logx.w(TAG, "restarting unhealthy pool backend for $url")
+        supervisor.stop()
+        replacement.start(TunnelPayload.withUrl(basePayload, url), poolEncryptionKey)
+        poolProxy?.updateBackends(poolSupervisors.values.toList())
     }
 
     private fun onPoolBackendExit(message: String) {
@@ -130,6 +171,7 @@ class ParallelTransportGroup(
         poolProxy?.stop()
         poolProxy = null
         poolSupervisors.values.forEach { it.stop() }
+        poolRestartAt.clear()
         poolSupervisors.clear()
     }
 }

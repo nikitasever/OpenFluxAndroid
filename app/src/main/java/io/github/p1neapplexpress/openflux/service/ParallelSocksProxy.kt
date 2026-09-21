@@ -39,12 +39,23 @@ class ParallelSocksProxy(
     // one is worth abandoning quickly rather than treating it like normal
     // network latency.
     private val connectTimeoutMs: Int = 4_000,
+    /**
+     * Called when a backend has failed [UNHEALTHY_AFTER_FAILURES] dials in a row. This proxy is
+     * the only part of the app that can tell a dead transport from a live one - see
+     * [NativeProcessSupervisor.noteDialFailure] - so it has to report what it sees rather than
+     * just logging it and moving on.
+     */
+    private val onBackendUnhealthy: (NativeProcessSupervisor) -> Unit = {},
 ) {
     companion object {
         private const val TAG = "ParallelSocksProxy"
         private const val ATYP_IPV4 = 0x01
         private const val ATYP_DOMAIN = 0x03
         private const val ATYP_IPV6 = 0x04
+
+        // High enough that a handful of genuinely unreachable targets doesn't condemn a working
+        // backend, low enough to notice a dead one within seconds of real browsing.
+        private const val UNHEALTHY_AFTER_FAILURES = 6
     }
 
     private var server: java.net.ServerSocket? = null
@@ -138,7 +149,18 @@ class ParallelSocksProxy(
             val socket = runCatching { Socks5.connect(backend.socksPort, target, connectTimeoutMs) }
                 .onFailure { Logx.w(TAG, "backend on ${backend.socksPort} failed for $target: ${it.message}") }
                 .getOrNull()
-            if (socket != null) return socket
+            if (socket != null) {
+                backend.resetDialFailures()
+                return socket
+            }
+            if (backend.noteDialFailure() >= UNHEALTHY_AFTER_FAILURES) {
+                // Reset so the next report needs a fresh streak: the handler may decline to act
+                // (it rate-limits restarts), and a backend stuck above the threshold would
+                // otherwise never be reported again.
+                backend.resetDialFailures()
+                Logx.w(TAG, "backend on ${backend.socksPort} failed $UNHEALTHY_AFTER_FAILURES dials in a row, reporting unhealthy")
+                onBackendUnhealthy(backend)
+            }
         }
         return null
     }
