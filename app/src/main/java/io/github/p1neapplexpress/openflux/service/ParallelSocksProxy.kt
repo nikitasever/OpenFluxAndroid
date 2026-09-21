@@ -53,9 +53,11 @@ class ParallelSocksProxy(
         private const val ATYP_DOMAIN = 0x03
         private const val ATYP_IPV6 = 0x04
 
-        // High enough that a handful of genuinely unreachable targets doesn't condemn a working
-        // backend, low enough to notice a dead one within seconds of real browsing.
-        private const val UNHEALTHY_AFTER_FAILURES = 6
+        // High enough that a handful of genuinely unreachable targets - or a network the
+        // transport simply cannot reach right now - doesn't condemn a backend into the
+        // restart path, which is costly enough to be worth delaying (see
+        // ParallelTransportGroup.RESTART_COOLDOWN_MS).
+        private const val UNHEALTHY_AFTER_FAILURES = 12
     }
 
     private var server: java.net.ServerSocket? = null

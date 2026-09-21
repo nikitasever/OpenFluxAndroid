@@ -24,11 +24,14 @@ class ParallelTransportGroup(
     companion object {
         private const val TAG = "ParallelTransportGroup"
 
-        // A restarted backend needs time to rejoin its document before its dials mean anything,
-        // and a phone that is simply offline fails every dial on every backend - without this
-        // the whole pool would be torn down and respawned over and over while it waits for
-        // connectivity to come back.
-        private const val RESTART_COOLDOWN_MS = 60_000L
+        // Restarting is a heavy, externally-visible action: the new process joins the shared
+        // document as a fresh participant, which evicts the exit node's own session, which
+        // reconnects and evicts ours - a mutual-eviction loop that keeps a working document
+        // permanently broken. Observed live at a 60s cooldown. The transport now recovers on
+        // its own (it has read/write deadlines on its WebSocket), so this exists only for a
+        // process genuinely wedged beyond that, and must stay rare enough not to churn the
+        // document.
+        private const val RESTART_COOLDOWN_MS = 300_000L
     }
 
     private var supervisors: List<NativeProcessSupervisor> = emptyList()
