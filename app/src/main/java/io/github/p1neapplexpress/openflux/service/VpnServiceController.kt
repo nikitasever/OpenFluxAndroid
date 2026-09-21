@@ -2,6 +2,8 @@ package io.github.p1neapplexpress.openflux.service
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Network
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -29,6 +31,7 @@ class VpnServiceController(private val service: VpnService) {
     }
 
     @Volatile private var iface: ParcelFileDescriptor? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
     val isRunning = AtomicBoolean(false)
 
     val fd: Int get() = iface?.fd ?: -1
@@ -106,12 +109,40 @@ class VpnServiceController(private val service: VpnService) {
         }
 
         iface = builder.establish()
+        trackUnderlyingNetwork()
         if (iface == null) {
             Logx.e(TAG, "Failed to establish VPN interface")
             EventBus.dispatch(AppEvent.LogMessage("[E] VPN establish failed"))
         } else {
             Logx.d(TAG, "VPN interface established fd=${iface?.fd}")
         }
+    }
+
+    /**
+     * Tells the system which real network carries this VPN, and keeps that current as the
+     * phone moves between Wi-Fi and mobile data.
+     *
+     * Without it the transport process - which is excluded from the VPN via
+     * addDisallowedApplication so it can reach Yandex at all - loses DNS the moment the tunnel
+     * starts carrying traffic: every lookup comes back "no such host". The first connect
+     * succeeds because it happens before routing takes hold, so the tunnel works for about
+     * half a minute and then can never reconnect, which looks exactly like a dead transport.
+     */
+    private fun trackUnderlyingNetwork() {
+        val cm = service.getSystemService(ConnectivityManager::class.java) ?: return
+        runCatching { service.setUnderlyingNetworks(cm.activeNetwork?.let { arrayOf(it) }) }
+            .onFailure { Logx.w(TAG, "setUnderlyingNetworks failed: ${it.message}") }
+
+        if (networkCallback != null) return
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                runCatching { service.setUnderlyingNetworks(arrayOf(network)) }
+            }
+        }
+        runCatching {
+            cm.registerDefaultNetworkCallback(callback)
+            networkCallback = callback
+        }.onFailure { Logx.w(TAG, "registerDefaultNetworkCallback failed: ${it.message}") }
     }
 
     private fun configureAppRouting(
@@ -136,6 +167,10 @@ class VpnServiceController(private val service: VpnService) {
 
     fun stop() {
         isRunning.set(false)
+        networkCallback?.let { cb ->
+            runCatching { service.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(cb) }
+            networkCallback = null
+        }
         iface?.let {
             runCatching { it.close() }
             iface = null
