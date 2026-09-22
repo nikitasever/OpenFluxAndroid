@@ -40,7 +40,8 @@ class ParallelSocksProxy(
     // network latency.
     private val connectTimeoutMs: Int = 4_000,
     /**
-     * Called when a backend has failed [UNHEALTHY_AFTER_FAILURES] dials in a row. This proxy is
+     * Called when a backend has failed [UNHEALTHY_AFTER_FAILURES] dials and completed none for
+     * [UNHEALTHY_AFTER_MS]. This proxy is
      * the only part of the app that can tell a dead transport from a live one - see
      * [NativeProcessSupervisor.noteDialFailure] - so it has to report what it sees rather than
      * just logging it and moving on.
@@ -65,6 +66,12 @@ class ParallelSocksProxy(
         // mid-handshake, every single time, and starting a replacement that overlapped the
         // original as a second participant in the same document.
         private const val BACKEND_GRACE_MS = 30_000L
+
+        // And it must have completed nothing at all for this long. Restarting is what feeds the
+        // eviction loop - each new process joins the document as another participant - so it
+        // has to be reserved for a backend that is genuinely stuck rather than one riding out
+        // the server's routine participant drop.
+        private const val UNHEALTHY_AFTER_MS = 120_000L
     }
 
     private var server: java.net.ServerSocket? = null
@@ -159,19 +166,21 @@ class ParallelSocksProxy(
                 .onFailure { Logx.w(TAG, "backend on ${backend.socksPort} failed for $target: ${it.message}") }
                 .getOrNull()
             if (socket != null) {
-                backend.resetDialFailures()
+                backend.resetDialTracking()
                 return socket
             }
             if (backend.readyForMs() < BACKEND_GRACE_MS) {
-                backend.resetDialFailures()
+                backend.resetDialTracking()
                 continue
             }
-            if (backend.noteDialFailure() >= UNHEALTHY_AFTER_FAILURES) {
-                // Reset so the next report needs a fresh streak: the handler may decline to act
+            val failures = backend.noteDialFailure()
+            val silentMs = backend.msSinceDialSuccess()
+            if (failures >= UNHEALTHY_AFTER_FAILURES && silentMs >= UNHEALTHY_AFTER_MS) {
+                // Reset so the next report needs a fresh window: the handler may decline to act
                 // (it rate-limits restarts), and a backend stuck above the threshold would
                 // otherwise never be reported again.
-                backend.resetDialFailures()
-                Logx.w(TAG, "backend on ${backend.socksPort} failed $UNHEALTHY_AFTER_FAILURES dials in a row, reporting unhealthy")
+                backend.resetDialTracking()
+                Logx.w(TAG, "backend on ${backend.socksPort} completed no dial in ${silentMs / 1000}s ($failures failures), reporting unhealthy")
                 onBackendUnhealthy(backend)
             }
         }

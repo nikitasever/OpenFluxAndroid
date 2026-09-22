@@ -49,6 +49,9 @@ class NativeProcessSupervisor(
     private var readySince = 0L
 
     @Volatile
+    private var lastDialOkAt = 0L
+
+    @Volatile
     private var process: Process? = null
 
     @Volatile
@@ -68,7 +71,7 @@ class NativeProcessSupervisor(
 
     /**
      * Records a failed SOCKS5 dial through this backend and returns the new consecutive-failure
-     * count; [resetDialFailures] clears it after a success.
+     * count; [resetDialTracking] clears it after a success.
      *
      * [isReady] deliberately cannot detect this on its own: it means "the local SOCKS5 port
      * accepts connections", which stays true for a process whose document session died
@@ -77,7 +80,24 @@ class NativeProcessSupervisor(
      */
     fun noteDialFailure(): Int = dialFailures.incrementAndGet()
 
-    fun resetDialFailures() = dialFailures.set(0)
+    fun resetDialTracking() {
+        dialFailures.set(0)
+        lastDialOkAt = SystemClock.elapsedRealtime()
+    }
+
+    /**
+     * How long this backend has gone without completing a single dial, measured from the last
+     * success or, if there has never been one, from the moment it became ready.
+     *
+     * The failure count alone cannot answer "is this backend dead": tun2socks opens a dozen
+     * connections at once, so every routine reconnect - and the document server drops one of
+     * the two participants about once a minute - blows through any streak threshold in about a
+     * second. Only a backend that completes nothing over minutes is actually stuck.
+     */
+    fun msSinceDialSuccess(): Long {
+        val ok = lastDialOkAt
+        return if (ok != 0L) SystemClock.elapsedRealtime() - ok else readyForMs()
+    }
 
     /**
      * How long this backend has been [isReady], or 0 if it isn't.
@@ -102,6 +122,7 @@ class NativeProcessSupervisor(
         shuttingDown.set(false)
         ready.set(false)
         readySince = 0L
+        lastDialOkAt = 0L
         dialFailures.set(0)
         error = null
         lastOutput = null
