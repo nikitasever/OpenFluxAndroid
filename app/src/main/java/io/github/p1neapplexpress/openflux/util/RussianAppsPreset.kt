@@ -1,0 +1,145 @@
+package io.github.p1neapplexpress.openflux.util
+
+/**
+ * Popular Russian services and apps (banks, Gosuslugi, marketplaces, fast food,
+ * Yandex services, delivery, telecom, taxi, education, smart home, media)
+ * sensitive to foreign IPs and recommended as the default bypass set.
+ */
+object RussianAppsPreset {
+    val PACKAGE_NAMES: Set<String> = setOf(
+        // Banks and finance
+        "ru.sberbankmobile",
+        "ru.sberbank.sberkids",
+        "com.idamob.tinkoff.android",
+        "com.tcsbank.tcsinvest",
+        "ru.vtb24.mobilebanking.android",
+        "ru.alfabank.mobile.android",
+        "ru.gazprombank.android.mobilebank.app",
+        "ru.raiffeisennews",
+        "ru.sovcomcard.halva.v1",
+        "ru.mts.money",
+        "ru.payment",
+        "ru.openbank.mobile.android",
+        "ru.bspb",
+        "ru.mkb.mobile",
+        "ru.rshb.dbo",
+        "ru.nspk.mirpay",
+        "ru.nspk.sbpay",
+        "com.bcr.ubrr",
+        "ru.unicredit.unicreditrustablet",
+
+        // Gosuslugi and government services
+        "ru.gosuslugi.esk",
+        "ru.gosuslugi.auto",
+        "ru.gosuslugi.culture",
+        "ru.fns.billchecker",
+        "com.tax.mobile",
+        "ru.nalog.fl",
+        "ru.mos.app",
+        "emias.info",
+        "ru.russianpost.android",
+        "ru.fssprus.fssprushandheld",
+        "ru.pfr.mobile",
+
+        // Transport, maps, taxi, carsharing
+        "ru.yandex.taxi",
+        "ru.yandex.yandexmaps",
+        "ru.yandex.yandexnavi",
+        "ru.dublgis.dgismobile",
+        "ru.rzd.pass",
+        "ru.delimobil.carsharing",
+        "ru.citydrive.app",
+        "ru.belkacar.belkacar",
+        "ru.aeroflot.mobile",
+        "ru.s7.touch",
+        "ru.pobeda.aero",
+        "com.taxsee.taxsee",
+
+        // Marketplaces, retail, fast food, delivery
+        "ru.ozon.app.android",
+        "com.wildberries.ru",
+        "com.avito.android",
+        "ru.yandex.market",
+        "ru.sbermegamarket.app",
+        "ru.yandex.eda",
+        "ru.yandex.lavka",
+        "ru.sbermarket",
+        "ru.sbermarket.android",
+        "ru.samokat.app",
+        "ru.tander.magnit",
+        "ru.x5.retail.loyalty",
+        "ru.pyaterochka.app.browser",
+        "ru.pyaterochka",
+        "ru.vkusvill.app",
+        "ru.perekrestok.app",
+        "ru.dns.shop",
+        "ru.dns.shop.android",
+        "ru.burgerking",
+        "com.tapston.burgerking",
+        "ru.rostics.app",
+        "ru.rostics",
+        "ru.kfc.kfc_delivery",
+        "com.yum.kfc",
+        "ru.dodopizza.app",
+        "com.dodopizza.driveapp",
+        "ru.mvideo.app",
+        "ru.eldorado.app",
+        "ru.leroymerlin.mobile",
+        "ru.maxiapp.client",
+        "ru.maxi.retail",
+
+        // Telecom
+        "ru.mts.mymts",
+        "ru.megafon.mlk",
+        "ru.beeline.services",
+        "ru.tele2.mytele2",
+        "ru.rt.myrt",
+        "com.yota.user",
+        "ru.filit.motiv.app",
+        "ru.motiv.app",
+        "ru.ycc.motiv",
+        "simmotiv.id.abonent",
+
+        // Smart home and IoT
+        "com.yandex.iot",
+        "ru.rt.smarthome",
+        "ru.sberbank.iot",
+        "com.ertelecom.smarthome",
+        "ru.mts.smarthome",
+
+        // Education
+        "net.umschool.umschool_flutter.prod",
+        "net.umschool.umschool",
+        "ru.umschool",
+        "ru.umschool.app",
+        "ru.maximumtest.app",
+
+        // Utilities and streaming
+        "com.wbd.stream",
+        "ru.makc.app",
+        "ru.makc.mobile",
+        "ru.makc.client",
+        "com.nusp.max",
+        "com.algorithmservice.max2",
+
+        // Media, social, streaming
+        "com.vkontakte.android",
+        "ru.ok.android",
+        "com.vk.vkvideo",
+        "com.vk.music",
+        "ru.rutube.app",
+        "ru.kinopoisk",
+        "ru.yandex.music",
+        "ru.yandex.searchplugin",
+        "ru.yandex.disk",
+        "ru.yandex.mail",
+        "ru.mail.mailapp",
+        "com.my.cloud",
+        "ru.yandex.zen",
+        "tv.start.android",
+        "ru.premier",
+        "ru.kion.kion",
+        "ru.smotrim.app",
+        "ru.ntv.client"
+    )
+}

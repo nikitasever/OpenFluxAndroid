@@ -63,6 +63,23 @@ class TunnelPayloadTest {
     }
 
     @Test
+    fun `withUrl replaces an existing --url value`() {
+        val payload = TunnelPayload.build(Form(TransportType.yandex, url = "https://docs.yandex.ru/a"))!!
+        assertEquals(
+            listOf("--role", "client", "--transport", "yandex", "--url", "https://docs.yandex.ru/b"),
+            TunnelPayload.withUrl(payload, "https://docs.yandex.ru/b"),
+        )
+    }
+
+    @Test
+    fun `withUrl appends --url when the payload has none`() {
+        assertEquals(
+            listOf("--role", "client", "--url", "https://docs.yandex.ru/x"),
+            TunnelPayload.withUrl(listOf("--role", "client"), "https://docs.yandex.ru/x"),
+        )
+    }
+
+    @Test
     fun `value reads both flag spellings`() {
         assertEquals("legacy", TunnelPayload.value(listOf("--codec=legacy"), "codec"))
         assertEquals("legacy", TunnelPayload.value(listOf("-codec", "legacy"), "codec"))

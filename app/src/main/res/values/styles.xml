@@ -4,4 +4,123 @@
         <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
         <item name="android:windowExitAnimation">@android:anim/fade_out</item>
     </style>
+
+    <style name="SettingsSectionHeader">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">24dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="SettingsRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:layout_marginTop">10dp</item>
+    </style>
+
+    <style name="SettingsRowLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="SettingsHelper">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+
+    <style name="SettingsInput">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:background">@drawable/bg_config_selector</item>
+        <item name="android:paddingHorizontal">14dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Card container grouping a settings section into one rounded block. -->
+    <style name="SettingsCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/bg_settings_card</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingVertical">6dp</item>
+    </style>
+
+    <!-- One label+control row inside a SettingsCard. Every row in every card
+         uses this same height/padding so switches, spinners and inline
+         inputs all line up on the same right edge. -->
+    <style name="SettingsCardRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <style name="SettingsCardRow.Clickable">
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:background">@drawable/bg_settings_card_row</item>
+    </style>
+
+    <style name="SettingsCardLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:layout_marginEnd">12dp</item>
+    </style>
+
+    <!-- Helper caption under a row, inside the same card, full width. -->
+    <style name="SettingsCardHelper">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- 1dp separator between rows in the same card. -->
+    <style name="SettingsCardDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/bg_card_stroke</item>
+    </style>
+
+    <!-- Compact right-aligned value field for a card row (MTU, port, ...). -->
+    <style name="SettingsCardValueInput">
+        <item name="android:layout_width">84dp</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:background">@drawable/bg_config_selector</item>
+        <item name="android:paddingHorizontal">10dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Compact right-aligned spinner for a card row (IP stack, language, ...). -->
+    <style name="SettingsCardSpinner">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:minWidth">120dp</item>
+    </style>
 </resources>

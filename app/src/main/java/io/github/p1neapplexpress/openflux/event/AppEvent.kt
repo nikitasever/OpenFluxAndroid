@@ -8,4 +8,10 @@ sealed interface AppEvent {
 
     /** The OpenFlux process died or never came up; the VPN has been stopped. */
     data class NativeProcessExited(val message: String) : AppEvent
+
+    /** Per-second upload/download throughput while the tunnel is running, in bytes/sec. */
+    data class SpeedUpdate(val rxBytesPerSec: Long, val txBytesPerSec: Long) : AppEvent
+
+    /** Round-trip time through the tunnel to a public host, or null if the probe failed. */
+    data class PingUpdate(val rttMs: Long?) : AppEvent
 }

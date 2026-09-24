@@ -34,6 +34,7 @@ class NativeProcessSupervisor(
         private const val CONNECT_PROBE_MS = 200
         private const val STOP_GRACE_MS = 1_000L
         private const val KEY_FILE = "openflux-encryption.key"
+        private const val COOKIE_FILE = "openflux-session.cookie"
 
         // Go's log prefix: "2026/09/17 01:02:03.456789 main.go:349: ".
         private val LOG_PREFIX = Regex("""^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}(\.\d+)? (\S+\.go:\d+: )?""")
@@ -43,6 +44,13 @@ class NativeProcessSupervisor(
     private val running = AtomicBoolean(false)
     private val ready = AtomicBoolean(false)
     private val shuttingDown = AtomicBoolean(false)
+    private val dialFailures = java.util.concurrent.atomic.AtomicInteger(0)
+
+    @Volatile
+    private var readySince = 0L
+
+    @Volatile
+    private var lastDialOkAt = 0L
 
     @Volatile
     private var process: Process? = null
@@ -62,15 +70,62 @@ class NativeProcessSupervisor(
 
     val isReady: Boolean get() = ready.get()
 
-    private val keyFile: File get() = File(context.noBackupFilesDir, KEY_FILE)
+    /**
+     * Records a failed SOCKS5 dial through this backend and returns the new consecutive-failure
+     * count; [resetDialTracking] clears it after a success.
+     *
+     * [isReady] deliberately cannot detect this on its own: it means "the local SOCKS5 port
+     * accepts connections", which stays true for a process whose document session died
+     * server-side - the binary keeps running and keeps listening, it just can't relay anything.
+     * Dials are the only signal the app has that reflects the tunnel rather than the listener.
+     */
+    fun noteDialFailure(): Int = dialFailures.incrementAndGet()
 
-    fun start(payload: List<String>, encryptionKey: String?) {
+    fun resetDialTracking() {
+        dialFailures.set(0)
+        lastDialOkAt = SystemClock.elapsedRealtime()
+    }
+
+    /**
+     * How long this backend has gone without completing a single dial, measured from the last
+     * success or, if there has never been one, from the moment it became ready.
+     *
+     * The failure count alone cannot answer "is this backend dead": tun2socks opens a dozen
+     * connections at once, so every routine reconnect - and the document server drops one of
+     * the two participants about once a minute - blows through any streak threshold in about a
+     * second. Only a backend that completes nothing over minutes is actually stuck.
+     */
+    fun msSinceDialSuccess(): Long {
+        val ok = lastDialOkAt
+        return if (ok != 0L) SystemClock.elapsedRealtime() - ok else readyForMs()
+    }
+
+    /**
+     * How long this backend has been [isReady], or 0 if it isn't.
+     *
+     * Becoming ready only means the local SOCKS5 port opened; the transport still has to fetch
+     * the document, complete a WebSocket handshake and get its collaborative-editing session
+     * accepted before it can relay anything. Dials that fail during that window say nothing
+     * about its health - and tun2socks opens a burst of them the moment the tunnel comes up.
+     */
+    fun readyForMs(): Long {
+        val since = readySince
+        return if (ready.get() && since != 0L) SystemClock.elapsedRealtime() - since else 0L
+    }
+
+    private val keyFile: File get() = File(context.noBackupFilesDir, KEY_FILE)
+    private val cookieFile: File get() = File(context.noBackupFilesDir, COOKIE_FILE)
+
+    fun start(payload: List<String>, encryptionKey: String?, sessionCookie: String? = null) {
         if (running.getAndSet(true)) {
             Logx.d(TAG, "already running, ignoring start")
             return
         }
         shuttingDown.set(false)
         ready.set(false)
+        readySince = 0L
+        lastDialOkAt = 0L
+        dialFailures.set(0)
         error = null
         lastOutput = null
 
@@ -80,7 +135,8 @@ class NativeProcessSupervisor(
 
             socksPort = Loopback.freeTcpPort()
             val keyPath = encryptionKey?.let(::writeKey)
-            val args = NativeArgs.build(payload, "127.0.0.1:$socksPort", keyPath)
+            val cookiePath = sessionCookie?.takeIf { it.isNotBlank() }?.let(::writeCookie)
+            val args = NativeArgs.build(payload, "127.0.0.1:$socksPort", keyPath, cookiePath)
             Logx.i(TAG, "exec: $NATIVE_LIB ${NativeArgs.redact(args).joinToString(" ")}")
 
             val p = ProcessBuilder(listOf("$nativeDir/$NATIVE_LIB") + args)
@@ -88,6 +144,7 @@ class NativeProcessSupervisor(
                 .redirectErrorStream(true)
                 .start()
             process = p
+            pidOf(p)?.let(NativeProcessRegistry::register)
             val output = thread(name = "OpenFluxOutput", isDaemon = true) { pumpOutput(p) }
             thread(name = "OpenFluxWatch", isDaemon = true) { watch(p, output) }
         } catch (e: Exception) {
@@ -103,16 +160,17 @@ class NativeProcessSupervisor(
         running.set(false)
         process?.let(::destroy)
         process = null
-        deleteKey()
+        deleteKey(); deleteCookie()
     }
 
     private fun watch(p: Process, output: Thread) {
         val deadline = SystemClock.elapsedRealtime() + READY_TIMEOUT_MS
         while (!shuttingDown.get() && p.isAlive) {
             if (Loopback.canConnect(socksPort, CONNECT_PROBE_MS)) {
+                readySince = SystemClock.elapsedRealtime()
                 ready.set(true)
                 // OpenFlux reads the key before it starts listening.
-                deleteKey()
+                deleteKey(); deleteCookie()
                 Logx.i(TAG, "OpenFlux is up, SOCKS5 on 127.0.0.1:$socksPort")
                 EventBus.dispatch(AppEvent.TransportConnected)
                 break
@@ -126,6 +184,7 @@ class NativeProcessSupervisor(
         }
 
         val code = p.waitFor()
+        pidOf(p)?.let(NativeProcessRegistry::unregister)
         if (shuttingDown.get() || process !== p) return
         output.join(STOP_GRACE_MS) // let the reader catch the fatal log line
         val reason = lastOutput?.replace(LOG_PREFIX, "")
@@ -151,14 +210,48 @@ class NativeProcessSupervisor(
         error = message
         ready.set(false)
         running.set(false)
-        deleteKey()
+        deleteKey(); deleteCookie()
         if (!shuttingDown.get()) handler.post { onUnexpectedExit(message) }
     }
 
     private fun destroy(p: Process) {
+        pidOf(p)?.let(NativeProcessRegistry::unregister)
         if (!p.isAlive) return
         p.destroy()
         handler.postDelayed({ if (p.isAlive) p.destroyForcibly() }, STOP_GRACE_MS)
+    }
+
+    /**
+     * android.jar's compile-time stub doesn't declare java.lang.Process.pid() (Java 9+), and
+     * on-device testing showed it's ALSO not callable via reflection on at least one real
+     * minSdk 26+ ROM (Samsung One UI / Android 16: NoSuchMethodException) - so unlike the
+     * comment this used to have, it isn't just a compile-time gap. Falls back to reading the
+     * "pid" field ART's own Process implementation has carried since Android's Harmony days,
+     * then to parsing it out of toString() as a last resort. Returns null (and logs once,
+     * loudly, since this used to fail silently) only if none of that works - losing the
+     * [NativeProcessRegistry] exemption then means [StaleProcesses] can kill this process as
+     * a sibling parallel document's leftover, which is exactly the bug this chain exists to
+     * avoid.
+     */
+    private fun pidOf(process: Process): Long? {
+        runCatching { return process.javaClass.getMethod("pid").invoke(process) as Long }
+        runCatching {
+            var cls: Class<*>? = process.javaClass
+            var field: java.lang.reflect.Field? = null
+            while (cls != null && field == null) {
+                field = cls.declaredFields.find { it.name == "pid" }
+                cls = cls.superclass
+            }
+            field ?: return@runCatching
+            field.isAccessible = true
+            return (field.get(process) as? Number)?.toLong() ?: return@runCatching
+        }
+        runCatching {
+            val match = Regex("""pid=(\d+)""").find(process.toString())
+            if (match != null) return match.groupValues[1].toLong()
+        }
+        Logx.w(TAG, "could not determine pid of $process by any means; StaleProcesses may treat it as a leftover")
+        return null
     }
 
     private fun writeKey(key: String): String {
@@ -171,5 +264,21 @@ class NativeProcessSupervisor(
 
     private fun deleteKey() {
         runCatching { keyFile.delete() }
+    }
+
+    /**
+     * Same treatment as the encryption key: app-private, owner-readable only, and removed
+     * once the transport has read it. It is a full Yandex session, not just a tunnel secret.
+     */
+    private fun writeCookie(cookie: String): String {
+        val file = cookieFile
+        file.writeText(cookie.trim())
+        file.setReadable(false, false)
+        file.setReadable(true, true)
+        return file.absolutePath
+    }
+
+    private fun deleteCookie() {
+        runCatching { cookieFile.delete() }
     }
 }

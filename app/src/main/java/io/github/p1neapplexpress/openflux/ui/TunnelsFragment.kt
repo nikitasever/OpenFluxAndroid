@@ -32,8 +32,11 @@ import io.github.p1neapplexpress.openflux.R
 import io.github.p1neapplexpress.openflux.data.Tunnel
 import io.github.p1neapplexpress.openflux.data.TunnelState
 import io.github.p1neapplexpress.openflux.event.AppEvent
+import io.github.p1neapplexpress.openflux.event.DeepLinkImport
+import io.github.p1neapplexpress.openflux.event.EventBus
 import io.github.p1neapplexpress.openflux.ui.widget.AuroraView
 import io.github.p1neapplexpress.openflux.ui.widget.PulseRingsView
+import io.github.p1neapplexpress.openflux.util.toSpeedString
 import io.github.p1neapplexpress.openflux.util.toUptimeHms
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -54,6 +57,9 @@ class TunnelsFragment : BaseFragment() {
     private lateinit var chevron: ImageView
     private lateinit var statusText: TextView
     private lateinit var uptimeText: TextView
+    private lateinit var speedRow: View
+    private lateinit var speedDownText: TextView
+    private lateinit var speedUpText: TextView
 
     private var rotationAnim: ObjectAnimator? = null
     private var breathAnim: ObjectAnimator? = null
@@ -81,10 +87,21 @@ class TunnelsFragment : BaseFragment() {
         val raw = (result as? QRResult.QRSuccess)?.content?.rawValue
             ?: return@registerForActivityResult
         runCatching { qrJson.decodeFromString<Tunnel>(raw) }
-            .onSuccess { vm.addTunnel(it); requestVpnAndStart(it) }
+            .onSuccess { importTunnel(it) }
             .onFailure {
                 Toast.makeText(requireContext(), R.string.qr_scan_failed, Toast.LENGTH_LONG).show()
             }
+    }
+
+    /** Shared by the QR scanner and `openflux://import` deep links - both hand us a ready-to-use Tunnel. */
+    private fun importTunnel(tunnel: Tunnel) {
+        vm.addTunnel(tunnel)
+        requestVpnAndStart(tunnel)
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.tunnel_imported, tunnel.name),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
 
     // QR codes may come from newer app versions with fields this one doesn't know.
@@ -108,6 +125,9 @@ class TunnelsFragment : BaseFragment() {
         chevron = view.findViewById(R.id.chevron)
         statusText = view.findViewById(R.id.statusText)
         uptimeText = view.findViewById(R.id.uptimeText)
+        speedRow = view.findViewById(R.id.speedRow)
+        speedDownText = view.findViewById(R.id.speedDownText)
+        speedUpText = view.findViewById(R.id.speedUpText)
 
         connectButton.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -128,6 +148,13 @@ class TunnelsFragment : BaseFragment() {
         }
         view.findViewById<View>(R.id.addButton).setOnClickListener {
             qrScanner.launch(null)
+        }
+        view.findViewById<View>(R.id.settingsButton).setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.main, SettingsFragment())
+                .addToBackStack("settings")
+                .commit()
         }
 
         observe()
@@ -151,6 +178,19 @@ class TunnelsFragment : BaseFragment() {
                 launch { vm.active.collect { applyState(it) } }
                 launch { vm.uptimeSeconds.collect { renderUptime(it) } }
                 launch { vm.selected.collect { renderSelected(it) } }
+                launch {
+                    DeepLinkImport.pending.collect { tunnel ->
+                        if (tunnel != null) {
+                            importTunnel(tunnel)
+                            DeepLinkImport.consume()
+                        }
+                    }
+                }
+                launch {
+                    EventBus.events.collect { ev ->
+                        if (ev is AppEvent.SpeedUpdate) renderSpeed(ev)
+                    }
+                }
             }
         }
     }
@@ -266,6 +306,12 @@ class TunnelsFragment : BaseFragment() {
                 .replace(R.id.main, AddTunFragment.edit(tunnel))
                 .addToBackStack("edit")
                 .commit()
+        }
+
+        menuView.findViewById<View>(R.id.menu_share).setOnClickListener {
+            menu.dismiss()
+            popup?.dismiss()
+            QrShareDialog.show(requireContext(), tunnel)
         }
 
         menuView.findViewById<View>(R.id.menu_delete).setOnClickListener {
@@ -462,11 +508,33 @@ class TunnelsFragment : BaseFragment() {
         uptimeText.translationY = 16f
         uptimeText.animate().alpha(1f).translationY(0f)
             .setDuration(500L).setInterpolator(OvershootInterpolator(1.2f)).start()
+        showSpeed()
     }
 
     private fun hideUptime() {
-        if (uptimeText.alpha < 0.05f) return
-        uptimeText.animate().alpha(0f).setDuration(200L).start()
+        if (uptimeText.alpha >= 0.05f) {
+            uptimeText.animate().alpha(0f).setDuration(200L).start()
+        }
+        hideSpeed()
+    }
+
+    private fun showSpeed() {
+        if (speedRow.alpha > 0.05f) return
+        speedRow.translationY = 12f
+        speedRow.animate().alpha(1f).translationY(0f)
+            .setDuration(500L).setInterpolator(OvershootInterpolator(1.2f)).start()
+    }
+
+    private fun hideSpeed() {
+        if (speedRow.alpha < 0.05f) return
+        speedRow.animate().alpha(0f).setDuration(200L).start()
+    }
+
+    /** Live throughput while the tunnel is running; VpnNotificationManager samples TrafficStats and dispatches this once a second. */
+    private fun renderSpeed(ev: AppEvent.SpeedUpdate) {
+        if (currentVisualState !is TunnelState.Running) return
+        speedDownText.text = ev.rxBytesPerSec.toSpeedString()
+        speedUpText.text = ev.txBytesPerSec.toSpeedString()
     }
 
     override fun onDestroyView() {

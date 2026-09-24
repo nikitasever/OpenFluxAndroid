@@ -36,6 +36,9 @@
 
     <string name="vpn_permission_required">Разрешите VPN для запуска транспорта и tun2socks</string>
     <string name="qr_scan_failed">Не удалось отсканировать QR-код</string>
+    <string name="tunnel_imported">Импортировано «%1$s»</string>
+    <string name="extra_documents">Дополнительные документы (необязательно)</string>
+    <string name="extra_documents_helper">Один URL на строку. Каждый работает параллельно; новые соединения распределяются по тем, что подключены, поэтому переподключение одного документа не тормозит остальные.</string>
     <string name="name_required">Введите имя туннеля</string>
 
     <string name="add_tunnel">Добавить туннель</string>
@@ -64,6 +67,14 @@
     <string name="no_configs">Нет конфигураций</string>
     <string name="action_edit">Изменить</string>
     <string name="action_delete">Удалить</string>
+    <string name="action_share_qr">Поделиться QR</string>
+    <string name="qr_share_title">QR-код туннеля</string>
+    <string name="qr_share_helper">Отсканируйте другим OpenFlux или поделитесь/скопируйте ссылку</string>
+    <string name="qr_share_send">Поделиться</string>
+    <string name="qr_share_copy">Скопировать ссылку</string>
+    <string name="qr_share_copied">Ссылка скопирована в буфер обмена</string>
+    <string name="qr_generate_failed">Не удалось создать QR-код</string>
+    <string name="close">Закрыть</string>
     <string name="delete_config_title">Удалить конфигурацию?</string>
     <string name="delete_config_msg">Конфигурация будет удалена безвозвратно.</string>
     <string name="cancel">Отмена</string>
@@ -80,4 +91,71 @@
     <string name="notify_msg_running">Туннель активен</string>
     <string name="notify_msg_error">Ошибка</string>
     <string name="notify_channel_desc">Статус VPN-сервиса</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_network">Сеть</string>
+    <string name="settings_mtu">MTU</string>
+    <string name="settings_mtu_helper">1280–1500, уменьшите, если туннель теряет пакеты</string>
+    <string name="settings_bypass_lan">Обход локальной сети</string>
+    <string name="settings_bypass_lan_helper">Не пускать трафик локальной сети через туннель</string>
+    <string name="settings_kill_switch">Kill switch</string>
+    <string name="settings_kill_switch_helper">Блокировать весь трафик при разрыве туннеля (Android 10+)</string>
+    <string name="settings_ip_stack">IP-стек</string>
+    <string name="settings_dns">DNS</string>
+    <string name="settings_dns_mode">Резолвер</string>
+    <string name="settings_dns_custom_primary">Основной DNS</string>
+    <string name="settings_dns_custom_secondary">Дополнительный DNS</string>
+    <string name="settings_dot">DNS-over-TLS</string>
+    <string name="settings_dot_helper">Шифровать DNS-запросы к резолверу выше (порт 853)</string>
+    <string name="settings_hotspot">Раздача по Wi-Fi</string>
+    <string name="settings_hotspot_enable">Делиться туннелем по Wi-Fi</string>
+    <string name="settings_hotspot_helper">Открывает SOCKS5-прокси в вашей локальной сети на время подключения</string>
+    <string name="settings_hotspot_port">Порт LAN-прокси</string>
+    <string name="settings_hotspot_auth">Требовать логин/пароль</string>
+    <string name="settings_misc">Прочее</string>
+    <string name="settings_show_speed">Показывать скорость в уведомлении</string>
+    <string name="settings_verbose_log">Подробное логирование</string>
+    <string name="settings_auto_boot">Автоподключение при загрузке</string>
+    <string name="settings_invalid_mtu">MTU должен быть от 1280 до 1500</string>
+    <string name="settings_invalid_port">Введите корректный порт (1–65535)</string>
+
+    <string-array name="dns_modes">
+        <item>Cloudflare (1.1.1.1)</item>
+        <item>Google (8.8.8.8)</item>
+        <item>AdGuard (94.140.14.14)</item>
+        <item>Quad9 (9.9.9.9)</item>
+        <item>Яндекс (77.88.8.8)</item>
+        <item>Свой</item>
+    </string-array>
+
+    <string name="split_tunnel_title">Маршрутизация приложений</string>
+    <string name="split_tunnel_enable">Маршрутизировать приложения отдельно</string>
+    <string name="split_tunnel_enable_helper">Выкл: все приложения используют туннель как обычно</string>
+    <string name="split_tunnel_mode_bypass">Выбранные приложения — в обход туннеля</string>
+    <string name="split_tunnel_mode_proxy">Только выбранные приложения — через туннель</string>
+    <string name="split_tunnel_search_hint">Поиск приложений</string>
+    <string name="split_tunnel_preset_ru">Пресет RU</string>
+    <string name="split_tunnel_select_all">Выбрать все</string>
+    <string name="split_tunnel_clear">Очистить</string>
+    <string name="split_tunnel_show_system">Показывать системные приложения</string>
+    <string name="split_tunnel_selected_count">Выбрано %1$d из %2$d</string>
+
+    <string-array name="ip_stack_modes">
+        <item>Авто</item>
+        <item>Только IPv4</item>
+        <item>IPv6</item>
+    </string-array>
+
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_label">Язык приложения</string>
+    <string name="settings_language_helper">Перезапускает интерфейс на выбранном языке</string>
+
+    <string-array name="app_languages">
+        <item>Системный</item>
+        <item>Русский</item>
+        <item>English</item>
+    </string-array>
+
+    <string name="speed_down">Загрузка</string>
+    <string name="speed_up">Отдача</string>
 </resources>
