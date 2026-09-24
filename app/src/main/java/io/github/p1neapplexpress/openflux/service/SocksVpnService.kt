@@ -44,15 +44,16 @@ class SocksVpnService : android.net.VpnService() {
             encryptionKey: String?,
             extraDocumentUrls: Array<String>,
             poolUrl: String?,
+            sessionCookie: String?,
         ) {
             transport ?: return
             if (poolUrl.isNullOrBlank()) {
-                group.start(args.toList(), encryptionKey, extraDocumentUrls.toList())
+                group.start(args.toList(), encryptionKey, extraDocumentUrls.toList(), sessionCookie)
                 return
             }
             val poller = DocumentPoolPoller(poolUrl) { docs -> group.reconcilePool(docs) }
             poolPoller = poller
-            group.startPool(args.toList(), encryptionKey, emptyList())
+            group.startPool(args.toList(), encryptionKey, emptyList(), sessionCookie)
             poller.start()
         }
 

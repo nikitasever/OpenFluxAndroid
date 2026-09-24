@@ -11,6 +11,16 @@ data class Tunnel(
     /** Shared secret for OpenFlux's AES-256-GCM transport encryption; null means unencrypted. */
     val encryptionKey: String? = null,
     /**
+     * A Yandex Cookie header, so the transport fetches its document signed in rather than
+     * anonymously. Yandex answers anonymous fetches of a flagged account's public documents
+     * with a captcha that no retry gets past. Null keeps the old anonymous behaviour.
+     *
+     * This is a full account session, so it is written to app-private storage and handed to
+     * the transport in a file - never on the command line, and never into the published
+     * pool.json, which is world-readable.
+     */
+    val sessionCookie: String? = null,
+    /**
      * Extra document URLs to run alongside the main one in [transportConnPayload], each as its
      * own independent transport process (see ParallelTransportGroup). Empty by default, so old
      * stored/shared tunnels decode unchanged.

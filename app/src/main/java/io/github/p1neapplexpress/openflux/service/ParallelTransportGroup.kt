@@ -47,6 +47,7 @@ class ParallelTransportGroup(
     private var poolProxy: ParallelSocksProxy? = null
     private var poolBasePayload: List<String>? = null
     private var poolEncryptionKey: String? = null
+    private var poolSessionCookie: String? = null
 
     /** SOCKS5 port tun2socks should target - the sole backend's port, or the aggregator's. */
     @Volatile
@@ -59,13 +60,18 @@ class ParallelTransportGroup(
 
     val isReady: Boolean get() = supervisors.any { it.isReady } || poolSupervisors.values.any { it.isReady }
 
-    fun start(payload: List<String>, encryptionKey: String?, extraDocumentUrls: List<String>) {
+    fun start(
+        payload: List<String>,
+        encryptionKey: String?,
+        extraDocumentUrls: List<String>,
+        sessionCookie: String? = null,
+    ) {
         deadCount.set(0)
         error = null
 
         val payloads = listOf(payload) + extraDocumentUrls.map { TunnelPayload.withUrl(payload, it) }
         val group = payloads.map { p ->
-            NativeProcessSupervisor(context, ::onBackendExit).also { it.start(p, encryptionKey) }
+            NativeProcessSupervisor(context, ::onBackendExit).also { it.start(p, encryptionKey, sessionCookie) }
         }
         supervisors = group
 
@@ -88,10 +94,16 @@ class ParallelTransportGroup(
     }
 
     /** Starts pool mode with an initial document set from [DocumentPoolPoller]. */
-    fun startPool(basePayload: List<String>, encryptionKey: String?, initialUrls: List<String>) {
+    fun startPool(
+        basePayload: List<String>,
+        encryptionKey: String?,
+        initialUrls: List<String>,
+        sessionCookie: String? = null,
+    ) {
         error = null
         poolBasePayload = basePayload
         poolEncryptionKey = encryptionKey
+        poolSessionCookie = sessionCookie
         initialUrls.forEach(::addPoolDocument)
         socksPort = ParallelSocksProxy(
             poolSupervisors.values.toList(),
@@ -117,7 +129,7 @@ class ParallelTransportGroup(
         val basePayload = poolBasePayload ?: return
         val supervisor = NativeProcessSupervisor(context, ::onPoolBackendExit)
         poolSupervisors[url] = supervisor
-        supervisor.start(TunnelPayload.withUrl(basePayload, url), poolEncryptionKey)
+        supervisor.start(TunnelPayload.withUrl(basePayload, url), poolEncryptionKey, poolSessionCookie)
     }
 
     private fun removePoolDocument(url: String) {
@@ -150,7 +162,7 @@ class ParallelTransportGroup(
 
         Logx.w(TAG, "restarting unhealthy pool backend for $url")
         supervisor.stop()
-        replacement.start(TunnelPayload.withUrl(basePayload, url), poolEncryptionKey)
+        replacement.start(TunnelPayload.withUrl(basePayload, url), poolEncryptionKey, poolSessionCookie)
         poolProxy?.updateBackends(poolSupervisors.values.toList())
     }
 

@@ -34,6 +34,7 @@ class NativeProcessSupervisor(
         private const val CONNECT_PROBE_MS = 200
         private const val STOP_GRACE_MS = 1_000L
         private const val KEY_FILE = "openflux-encryption.key"
+        private const val COOKIE_FILE = "openflux-session.cookie"
 
         // Go's log prefix: "2026/09/17 01:02:03.456789 main.go:349: ".
         private val LOG_PREFIX = Regex("""^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}(\.\d+)? (\S+\.go:\d+: )?""")
@@ -113,8 +114,9 @@ class NativeProcessSupervisor(
     }
 
     private val keyFile: File get() = File(context.noBackupFilesDir, KEY_FILE)
+    private val cookieFile: File get() = File(context.noBackupFilesDir, COOKIE_FILE)
 
-    fun start(payload: List<String>, encryptionKey: String?) {
+    fun start(payload: List<String>, encryptionKey: String?, sessionCookie: String? = null) {
         if (running.getAndSet(true)) {
             Logx.d(TAG, "already running, ignoring start")
             return
@@ -133,7 +135,8 @@ class NativeProcessSupervisor(
 
             socksPort = Loopback.freeTcpPort()
             val keyPath = encryptionKey?.let(::writeKey)
-            val args = NativeArgs.build(payload, "127.0.0.1:$socksPort", keyPath)
+            val cookiePath = sessionCookie?.takeIf { it.isNotBlank() }?.let(::writeCookie)
+            val args = NativeArgs.build(payload, "127.0.0.1:$socksPort", keyPath, cookiePath)
             Logx.i(TAG, "exec: $NATIVE_LIB ${NativeArgs.redact(args).joinToString(" ")}")
 
             val p = ProcessBuilder(listOf("$nativeDir/$NATIVE_LIB") + args)
@@ -157,7 +160,7 @@ class NativeProcessSupervisor(
         running.set(false)
         process?.let(::destroy)
         process = null
-        deleteKey()
+        deleteKey(); deleteCookie()
     }
 
     private fun watch(p: Process, output: Thread) {
@@ -167,7 +170,7 @@ class NativeProcessSupervisor(
                 readySince = SystemClock.elapsedRealtime()
                 ready.set(true)
                 // OpenFlux reads the key before it starts listening.
-                deleteKey()
+                deleteKey(); deleteCookie()
                 Logx.i(TAG, "OpenFlux is up, SOCKS5 on 127.0.0.1:$socksPort")
                 EventBus.dispatch(AppEvent.TransportConnected)
                 break
@@ -207,7 +210,7 @@ class NativeProcessSupervisor(
         error = message
         ready.set(false)
         running.set(false)
-        deleteKey()
+        deleteKey(); deleteCookie()
         if (!shuttingDown.get()) handler.post { onUnexpectedExit(message) }
     }
 
@@ -261,5 +264,21 @@ class NativeProcessSupervisor(
 
     private fun deleteKey() {
         runCatching { keyFile.delete() }
+    }
+
+    /**
+     * Same treatment as the encryption key: app-private, owner-readable only, and removed
+     * once the transport has read it. It is a full Yandex session, not just a tunnel secret.
+     */
+    private fun writeCookie(cookie: String): String {
+        val file = cookieFile
+        file.writeText(cookie.trim())
+        file.setReadable(false, false)
+        file.setReadable(true, true)
+        return file.absolutePath
+    }
+
+    private fun deleteCookie() {
+        runCatching { cookieFile.delete() }
     }
 }

@@ -47,6 +47,7 @@ class AddTunFragment : BaseFragment() {
     private lateinit var urlContainer: TextInputLayout
     private lateinit var extraUrlsContainer: TextInputLayout
     private lateinit var poolUrlContainer: TextInputLayout
+    private lateinit var sessionCookieContainer: TextInputLayout
     private lateinit var maxContainer: View
     private lateinit var cupsWarning: View
 
@@ -66,6 +67,7 @@ class AddTunFragment : BaseFragment() {
         urlContainer = view.findViewById(R.id.urlContainer)
         extraUrlsContainer = view.findViewById(R.id.extraUrlsContainer)
         poolUrlContainer = view.findViewById(R.id.poolUrlContainer)
+        sessionCookieContainer = view.findViewById(R.id.sessionCookieContainer)
         maxContainer = view.findViewById(R.id.maxContainer)
         cupsWarning = view.findViewById(R.id.cupsEncryptionWarning)
 
@@ -73,6 +75,7 @@ class AddTunFragment : BaseFragment() {
         val docUrl = view.findViewById<TextView>(R.id.documentUrl)
         val extraDocUrls = view.findViewById<TextView>(R.id.extraDocumentUrls)
         val poolUrl = view.findViewById<TextView>(R.id.poolUrl)
+        val sessionCookie = view.findViewById<TextView>(R.id.sessionCookie)
         val maxToken = view.findViewById<TextView>(R.id.maxToken)
         val maxUid = view.findViewById<TextView>(R.id.maxUserId)
         val keyContainer = view.findViewById<TextInputLayout>(R.id.encryptionKeyContainer)
@@ -91,6 +94,7 @@ class AddTunFragment : BaseFragment() {
             docUrl.text = form.url
             extraDocUrls.text = initial.extraDocumentUrls.joinToString("\n")
             poolUrl.text = initial.poolUrl.orEmpty()
+            sessionCookie.text = initial.sessionCookie.orEmpty()
             maxToken.text = form.maxToken
             maxUid.text = form.maxUid
             key.text = initial.encryptionKey.orEmpty()
@@ -163,6 +167,8 @@ class AddTunFragment : BaseFragment() {
                     emptyList()
                 },
                 poolUrl = poolUrl.text.trim().toString().takeIf { transport.usesUrl && it.isNotEmpty() },
+                sessionCookie = sessionCookie.text.trim().toString()
+                    .takeIf { transport.usesUrl && it.isNotEmpty() },
             )
 
             val old = editing
@@ -183,6 +189,7 @@ class AddTunFragment : BaseFragment() {
         urlContainer.isVisible = selected.usesUrl
         extraUrlsContainer.isVisible = selected.usesUrl
         poolUrlContainer.isVisible = selected.usesUrl
+        sessionCookieContainer.isVisible = selected.usesUrl
         maxContainer.isVisible = !selected.usesUrl
         urlContainer.hint = getString(
             when (selected) {
